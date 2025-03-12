@@ -1,7 +1,7 @@
 import gymnasium as gym
 from stable_baselines3 import SAC
+from stable_baselines3.common.vec_env import DummyVecEnv, VecNormalize
 import os
-import numpy as np
 
 class CustomCarRacingEnv(gym.Wrapper):
     def __init__(self, env):
@@ -19,25 +19,26 @@ class CustomCarRacingEnv(gym.Wrapper):
         """
         도로 중심을 유지하고 정상적인 주행을 유도하는 보상 함수
         """
-        speed_reward = obs[4]  # 속도 유지 보상 (obs[4]는 속도 정보)
-        track_position = obs[1]  # 트랙 중심에서의 거리 (obs[1]은 도로 중심에서의 거리)
-        angle = obs[3]  # 차량 방향과 도로 방향의 차이 (obs[3]은 방향 정보)
+        speed_reward = obs[4]  # 속도 유지 보상
+        track_position = obs[1]  # 트랙 중심에서의 거리
+        angle = obs[3]  # 차량 방향과 도로 방향의 차이
 
-        # 도로 중심을 따라가도록 유도하는 보상
+        # 도로 중심 유지 보상
         track_reward = 1.0 - abs(track_position)
 
-        # 도로를 벗어나면 패널티 부여
+        # 도로 이탈 패널티
         off_road_penalty = -10 if abs(track_position) > 0.9 else 0
 
-        # 차량이 도로를 따라가도록 유도
+        # 차량 방향 패널티
         angle_penalty = -abs(angle)
 
         # 총 보상 계산
         total_reward = speed_reward + track_reward + off_road_penalty + angle_penalty
         return total_reward
 
-# 🎯 환경 감싸기 (Custom Wrapper 적용)
-env = CustomCarRacingEnv(gym.make("CarRacing-v3", render_mode="human"))
+# 🎯 환경 감싸기 (VecEnv 적용)
+env = DummyVecEnv([lambda: CustomCarRacingEnv(gym.make("CarRacing-v3", render_mode="human"))])
+env = VecNormalize(env, norm_obs=True, norm_reward=True, clip_obs=10.0)  # 관찰값과 보상 정규화
 
 # 저장된 모델이 있는지 확인 후 불러오기
 if os.path.exists("sac_CarRacing.zip"):
@@ -54,9 +55,9 @@ model.learn(total_timesteps=50000, log_interval=4)
 model.save("sac_CarRacing")
 
 # 테스트 실행
-obs, info = env.reset()
+obs = env.reset()
 while True:
     action, _states = model.predict(obs, deterministic=True)
     obs, reward, terminated, truncated, info = env.step(action)
     if terminated or truncated:
-        obs, info = env.reset()
+        obs = env.reset()
