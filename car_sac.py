@@ -2,7 +2,7 @@ import gymnasium as gym
 from stable_baselines3 import SAC
 import os
 
-env = gym.make("CarRacing-v3", render_mode="human")
+env = gym.make("CarRacing-v3", render_mode="human", continuous=True)
 
 # 저장된 모델이 있는지 확인 후 불러오기
 if os.path.exists("sac_CarRacing.zip"):
@@ -13,7 +13,7 @@ else:
     print("🚀 저장된 모델이 없어 새로운 모델을 학습 시작")
 
 # 추가 학습 진행 (이전 학습 내용을 유지하며 학습)
-model.learn(total_timesteps=10000, log_interval=4)
+model.learn(total_timesteps=100000, log_interval=4)
 
 # 모델 저장 (학습된 내용 유지)
 model.save("sac_CarRacing")
