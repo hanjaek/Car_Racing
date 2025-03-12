@@ -9,7 +9,7 @@ if os.path.exists("sac_CarRacing.zip"):
     model = SAC.load("sac_CarRacing", env=env)  # 기존 모델 불러오기
     print("✅ 기존 학습된 모델 불러와서 추가 학습 진행")
 else:
-    model = SAC("MlpPolicy", env, verbose=1)  # 새로운 모델 생성
+    model = SAC("MlpPolicy", env, verbose=1, ent_coef="auto")  # 새로운 모델 생성
     print("🚀 저장된 모델이 없어 새로운 모델을 학습 시작")
 
 # 추가 학습 진행 (이전 학습 내용을 유지하며 학습)
