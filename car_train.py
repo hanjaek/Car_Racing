@@ -35,7 +35,7 @@ except:
     )
 
 # 학습 수행 (최소 500만 스텝 권장)
-model.learn(total_timesteps=5000000, log_interval=10)
+model.learn(total_timesteps=10000000, log_interval=10)
 
 # 모델 저장
 model.save("sac_car_racing_best")
