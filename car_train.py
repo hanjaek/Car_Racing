@@ -45,8 +45,8 @@ except:
 # 학습 로그 저장을 위한 데이터 리스트
 log_data = []
 
-# 학습 수행 (최소 500만 스텝 권장)
-for step in range(0, 5000000, 10000):  # 10,000 스텝마다 저장
+# 학습 수행 
+for step in range(0, 10000000, 10000):  # 10,000 스텝마다 저장
     model.learn(total_timesteps=10000, reset_num_timesteps=False)
     
     # 학습 상태 확인
