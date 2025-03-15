@@ -1,4 +1,4 @@
-# run.py (학습된 모델 실행 코드)
+# car_trained.py (학습된 모델 실행 코드)
 
 import gymnasium as gym
 import numpy as np
@@ -6,8 +6,8 @@ from stable_baselines3 import SAC
 from stable_baselines3.common.vec_env import DummyVecEnv
 from stable_baselines3.common.monitor import Monitor
 
-# CarRacing 환경 생성 (테스트 모드)
-env = gym.make("CarRacing-v2", domain_randomize=False, render_mode="human")
+# CarRacing 환경 생성 (v2 → v3로 변경)
+env = gym.make("CarRacing-v3", domain_randomize=False, render_mode="human")
 
 # Monitor로 환경 감시 (로그 저장)
 env = Monitor(env)
@@ -24,5 +24,6 @@ done = False
 
 while not done:
     action, _states = model.predict(obs, deterministic=True)  # 학습된 정책 사용
-    obs, reward, done, _, _ = env.step(action)  # 튜플 반환 값 처리
+    obs, reward, terminated, truncated, _ = env.step(action)  # v3에서는 terminated, truncated 반환
+    done = terminated or truncated  # 종료 조건 업데이트
     env.render()

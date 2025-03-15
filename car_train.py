@@ -1,4 +1,4 @@
-# train.py (학습 코드)
+# car_train.py (학습 코드)
 
 import gymnasium as gym
 import numpy as np
@@ -6,8 +6,8 @@ from stable_baselines3 import SAC
 from stable_baselines3.common.vec_env import DummyVecEnv
 from stable_baselines3.common.monitor import Monitor
 
-# CarRacing 환경 생성 (환경 색상 고정)
-env = gym.make("CarRacing-v2", domain_randomize=False, render_mode="rgb_array")
+# CarRacing 환경 생성 (v2 → v3 변경)
+env = gym.make("CarRacing-v3", domain_randomize=False, render_mode="rgb_array")
 
 # Monitor로 환경 감시 (로그 저장)
 env = Monitor(env)
