@@ -1,12 +1,18 @@
-# car_train.py (학습 코드)
-
+import os
 import gymnasium as gym
 import numpy as np
 from stable_baselines3 import SAC
 from stable_baselines3.common.vec_env import DummyVecEnv
 from stable_baselines3.common.monitor import Monitor
 
-# CarRacing 환경 생성 (v2 → v3 변경)
+# 모델 저장할 폴더 경로 설정
+MODEL_DIR = "model"
+MODEL_PATH = os.path.join(MODEL_DIR, "sac_car_racing_best")
+
+# 모델 폴더가 없으면 생성
+os.makedirs(MODEL_DIR, exist_ok=True)
+
+# CarRacing 환경 생성
 env = gym.make("CarRacing-v3", domain_randomize=False, render_mode="rgb_array")
 
 # Monitor로 환경 감시 (로그 저장)
@@ -17,26 +23,26 @@ env = DummyVecEnv([lambda: env])
 
 # 학습된 모델이 있으면 불러와서 추가 학습, 없으면 새 모델 학습
 try:
-    model = SAC.load("sac_car_racing_best", env=env)
-    print("✅ 기존 모델을 불러와서 추가 학습합니다.")
+    model = SAC.load(MODEL_PATH, env=env)
+    print(f"✅ 기존 모델을 불러와서 추가 학습합니다. ({MODEL_PATH})")
 except:
     print("🚀 기존 모델이 없어서 새로 학습을 시작합니다.")
     model = SAC(
-        "CnnPolicy",  # CNN 기반 정책 사용
+        "CnnPolicy",
         env,
-        learning_rate=3e-4,  # 학습률
-        buffer_size=100000,  # 리플레이 버퍼 크기
-        batch_size=64,  # 배치 크기
-        tau=0.005,  # 목표 네트워크 업데이트 속도
-        gamma=0.99,  # 할인율
-        train_freq=4,  # 4 스텝마다 학습
-        gradient_steps=2,  # 업데이트 스텝
+        learning_rate=3e-4,
+        buffer_size=100000,
+        batch_size=64,
+        tau=0.005,
+        gamma=0.99,
+        train_freq=4,
+        gradient_steps=2,
         verbose=1
     )
 
 # 학습 수행 (최소 500만 스텝 권장)
-model.learn(total_timesteps=10000000, log_interval=10)
+model.learn(total_timesteps=5000000)
 
-# 모델 저장
-model.save("sac_car_racing_best")
-print("💾 학습이 완료되었습니다. 모델이 저장되었습니다.")
+# 모델 저장 (model 폴더 안에 저장됨)
+model.save(MODEL_PATH)
+print(f"💾 학습이 완료되었습니다. 모델이 저장되었습니다. ({MODEL_PATH})")
