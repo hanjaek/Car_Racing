@@ -31,7 +31,7 @@ class TensorBoardCallback(BaseCallback):
 
 # ✅ 모델 및 로그 저장할 폴더 설정
 MODEL_DIR = "basic_model_v0"
-LOG_DIR = "tensorboard_logs/basic_model_v0"
+LOG_DIR = "tensorboard_logs/basic_model_v0_logs"
 MODEL_PATH = os.path.join(MODEL_DIR, "sac_car_racing_best")
 
 # 폴더가 없으면 생성
