@@ -17,3 +17,4 @@ logs/
 model/
 basic_model_v0/
 basic_model_v1/
+tensorboard_logs/
