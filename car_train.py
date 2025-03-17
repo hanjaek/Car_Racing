@@ -6,7 +6,7 @@ from stable_baselines3.common.vec_env import DummyVecEnv
 from stable_baselines3.common.monitor import Monitor
 
 # 모델 저장할 폴더 경로 설정
-MODEL_DIR = "model"
+MODEL_DIR = "basic_model"
 MODEL_PATH = os.path.join(MODEL_DIR, "sac_car_racing_best")
 
 # 모델 폴더가 없으면 생성
