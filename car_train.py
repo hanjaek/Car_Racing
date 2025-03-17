@@ -31,12 +31,12 @@ except:
         "CnnPolicy",
         env,
         learning_rate=3e-4,
-        buffer_size=100000,
-        batch_size=64,
+        buffer_size=1000000,
+        batch_size=256,
         tau=0.005,
         gamma=0.99,
-        train_freq=4,
-        gradient_steps=2,
+        train_freq=1,
+        gradient_steps=1,
         verbose=1
     )
 
