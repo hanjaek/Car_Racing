@@ -22,11 +22,15 @@ env = DummyVecEnv([lambda: env])
 model = SAC.load(MODEL_PATH)
 print(f"✅ 학습된 모델을 불러왔습니다. ({MODEL_PATH}) 자율주행을 시작합니다!")
 
-obs, _ = env.reset()
-done = False
+# 환경 초기화
+obs = env.reset()
+env.render()  # 강제로 한 번 화면을 띄움
 
+done = False
 while not done:
     action, _states = model.predict(obs, deterministic=True)  # 학습된 정책 사용
-    obs, reward, terminated, truncated, _ = env.step(action)  # v3에서는 terminated, truncated 반환
-    done = terminated or truncated  # 종료 조건 업데이트
+
+    # 🔥 수정된 부분: 반환값을 4개만 받도록 변경!
+    obs, reward, done, info = env.step(action)  
+
     env.render()
