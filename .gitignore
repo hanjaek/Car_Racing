@@ -15,4 +15,5 @@ logs/
 
 # 모델 저장 폴더 무시 (필요 시)
 model/
-basic_model/
+basic_model_v0/
+basic_model_v1/
