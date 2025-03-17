@@ -40,8 +40,8 @@ except:
         verbose=1
     )
 
-# 학습 수행 (최소 1000만 스텝)
-model.learn(total_timesteps=10000000)
+# 학습 수행 (100만 스텝으로 변경)
+model.learn(total_timesteps=1000000)
 
 # 모델 저장 (model 폴더 안에 저장됨)
 model.save(MODEL_PATH)
