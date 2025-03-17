@@ -3,35 +3,10 @@ import gymnasium as gym
 from stable_baselines3 import SAC
 from stable_baselines3.common.vec_env import DummyVecEnv
 from stable_baselines3.common.monitor import Monitor
-from stable_baselines3.common.callbacks import BaseCallback
-from torch.utils.tensorboard import SummaryWriter
-
-# ✅ TensorBoard 콜백 (여러 가지 학습 지표 기록)
-class TensorBoardCallback(BaseCallback):
-    def __init__(self, log_dir):
-        super().__init__()
-        self.writer = SummaryWriter(log_dir)
-
-    def _on_step(self) -> bool:
-        # 매 1000 스텝마다 기록
-        if self.n_calls % 1000 == 0:
-            # SAC 모델에서 손실(loss) 값 가져오기
-            actor_loss = self.model.actor.optimizer.param_groups[0]['lr']
-            critic_loss = self.model.critic.optimizer.param_groups[0]['lr']
-            entropy_loss = self.model.ent_coef_optimizer.param_groups[0]['lr']
-            episode_reward = self.locals['rewards'][0]
-
-            # TensorBoard에 기록
-            self.writer.add_scalar("Loss/Actor Loss", actor_loss, self.num_timesteps)
-            self.writer.add_scalar("Loss/Critic Loss", critic_loss, self.num_timesteps)
-            self.writer.add_scalar("Loss/Entropy Loss", entropy_loss, self.num_timesteps)
-            self.writer.add_scalar("Rewards/Episode Reward", episode_reward, self.num_timesteps)
-            
-        return True
 
 # ✅ 모델 및 로그 저장할 폴더 설정
 MODEL_DIR = "basic_model_v0"
-LOG_DIR = "tensorboard_logs/basic_model_v0_logs"
+LOG_DIR = "tensorboard_logs"  
 MODEL_PATH = os.path.join(MODEL_DIR, "sac_car_racing_best")
 
 # 폴더가 없으면 생성
@@ -60,11 +35,11 @@ except:
         train_freq=1,
         gradient_steps=1,
         verbose=1,
-        tensorboard_log=LOG_DIR
+        tensorboard_log=LOG_DIR  # ✅ SAC 자동 로그만 저장
     )
 
-# ✅ 학습 수행 (100만 스텝)
-model.learn(total_timesteps=1000000, callback=TensorBoardCallback(LOG_DIR))
+# ✅ 학습 수행 
+model.learn(total_timesteps=1000000)
 
 # ✅ 모델 저장
 model.save(MODEL_PATH)
