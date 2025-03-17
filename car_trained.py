@@ -29,8 +29,6 @@ env.render()  # 강제로 한 번 화면을 띄움
 done = False
 while not done:
     action, _states = model.predict(obs, deterministic=True)  # 학습된 정책 사용
-
-    # 🔥 수정된 부분: 반환값을 4개만 받도록 변경!
     obs, reward, done, info = env.step(action)  
 
     env.render()
