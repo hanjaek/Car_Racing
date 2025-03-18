@@ -6,7 +6,7 @@ from stable_baselines3.common.vec_env import DummyVecEnv
 from stable_baselines3.common.monitor import Monitor
 
 # 모델 저장된 폴더 경로
-MODEL_DIR = "model"
+MODEL_DIR = "basic_model_v0"
 MODEL_PATH = os.path.join(MODEL_DIR, "sac_car_racing_best")
 
 # CarRacing 환경 생성 (테스트 모드)
