@@ -21,7 +21,7 @@ os.makedirs(MODEL_DIR, exist_ok=True)
 os.makedirs(LOG_DIR, exist_ok=True)
 
 # ✅ CarRacing 환경 생성
-env = gym.make("CarRacing-v3", domain_randomize=False, render_mode="rgb_array")
+env = gym.make("CarRacing-v3", domain_randomize=False, render_mode="human")
 env = Monitor(env)
 env = DummyVecEnv([lambda: env])
 
@@ -64,7 +64,7 @@ def get_human_action():
     return action
 
 # ✅ HIL 학습 루프 (300만 스텝)
-obs = env.reset()  
+obs = env.reset()
 done = False
 total_timesteps = 3000000
 step = 0
@@ -79,8 +79,21 @@ while step < total_timesteps:
         action = get_human_action()
         human_override = True  # 사람이 개입했음을 표시
 
-    # 환경 업데이트
-    next_obs, reward, terminated, truncated, _ = env.step(action)
+    # ✅ 환경 업데이트 (Gymnasium step() 반환값 처리)
+    step_result = env.step(action)
+
+    # ✅ Gymnasium step() 반환값 개수에 따라 분기 처리
+    if len(step_result) == 4:
+        next_obs, reward, done, info = step_result
+        terminated = done
+        truncated = False
+
+    elif len(step_result) == 5:
+        next_obs, reward, terminated, truncated, info = step_result
+
+    else:
+        raise ValueError(f"Unexpected number of return values from env.step(action): {len(step_result)}")
+
     done = terminated or truncated
     
     # 사람이 개입한 경우, 모델이 학습할 수 있도록 버퍼에 추가
