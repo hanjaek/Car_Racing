@@ -20,3 +20,4 @@ basic_model_v1/
 sac_hil_model_v0/
 tensorboard_logs/
 *.csv
+ceed_model_v0/

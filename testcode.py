@@ -16,15 +16,25 @@ pygame.display.set_caption("HIL Control Window")
 MODEL_DIR = "test"
 LOG_DIR = "tensorboard_logs"
 MODEL_PATH = os.path.join(MODEL_DIR, "sac_car_racing_best")
-CSV_FILE = "test.csv"  # ✅ CSV 파일 이름
+CSV_FILE = "test.csv"
 
 os.makedirs(MODEL_DIR, exist_ok=True)
 os.makedirs(LOG_DIR, exist_ok=True)
 
-# ✅ CarRacing 환경 생성
-env = gym.make("CarRacing-v3", domain_randomize=False, render_mode="human")
-env = Monitor(env)
-env = DummyVecEnv([lambda: env])
+# ✅ 트랙을 고정하는 SEED 값 설정
+SEED = 1  # 원하는 SEED 값 (변경 가능)
+
+# ✅ 환경 생성 함수 (SEED 적용)
+def make_env():
+    def _init():
+        env = gym.make("CarRacing-v3", domain_randomize=False, render_mode="human")
+        env.reset(seed=SEED)  # ✅ 트랙 고정
+        return env
+    return _init
+
+# ✅ DummyVecEnv 생성
+env = DummyVecEnv([make_env()])
+env.seed(SEED)  # ✅ 벡터 환경에 SEED 적용
 
 # ✅ 기존 모델 불러오기 or 새로운 모델 생성
 try:
@@ -50,6 +60,7 @@ except:
 current_steering = 0.0
 current_speed = 0.0
 
+# ✅ 사람이 개입하여 조작하는 함수 (HIL)
 def get_human_action(original_action):
     global current_steering, current_speed
     keys = pygame.key.get_pressed()
@@ -81,41 +92,48 @@ def get_human_action(original_action):
 
     return action
 
-# ✅ HIL 학습 루프 (300만 스텝)
-obs = env.reset()
-step = 0
-total_timesteps = 3000000
-
-# ✅ CSV 파일 생성 및 헤더 작성
+# ✅ CSV 파일 생성 및 헤더 추가 (처음 한 번만 실행)
 with open(CSV_FILE, mode="w", newline="") as file:
     writer = csv.writer(file)
-    writer.writerow(["Step", "Human Override", "Steering", "Acceleration", "Brake"])  # ✅ 헤더 추가
+    writer.writerow(["Step", "Human Override", "Steering", "Acceleration", "Brake"])  
 
-try:
-    while step < total_timesteps:
-        pygame.event.pump()
-        human_override = False  
-        action = model.predict(obs, deterministic=True)[0]
+# ✅ HIL 학습 루프 (300만 스텝)
+obs = env.reset()
+obs = obs.transpose(0, 3, 1, 2)  
+done = False
+total_timesteps = 3000000
+step = 0
 
-        if any(pygame.key.get_pressed()):  
-            action = get_human_action(action)
-            human_override = True  
+while step < total_timesteps:
+    pygame.event.pump()  
 
-        next_obs, reward, terminated, truncated, _ = env.step(action)
-        done = terminated or truncated
+    human_override = False  
+    action = model.predict(obs, deterministic=True)[0]  
 
-        # ✅ CSV에 데이터 저장
-        with open(CSV_FILE, mode="a", newline="") as file:
-            writer = csv.writer(file)
-            writer.writerow([
-                step, 
-                human_override, 
-                action[0][0],  # Steering
-                action[0][1],  # Acceleration
-                action[0][2]   # Brake
-            ])
+    if any(pygame.key.get_pressed()):  
+        action = get_human_action(action)
+        human_override = True  
 
-        # ✅ 자동 주행 데이터 학습 계속 진행
+    action = np.array(action).reshape(1, -1)  
+
+    # ✅ 환경 업데이트
+    step_result = env.step(action)
+
+    if len(step_result) == 4:  
+        next_obs, reward, done, info = step_result
+        terminated, truncated = done, False  
+    elif len(step_result) == 5:  
+        next_obs, reward, terminated, truncated, info = step_result
+    else:
+        raise ValueError(f"Unexpected number of return values from env.step(action): {len(step_result)}")
+
+    done = terminated or truncated
+
+    # ✅ obs 변환
+    next_obs = next_obs.transpose(0, 3, 1, 2)  
+
+    # ✅ 사람이 개입한 경우만 학습 데이터로 추가
+    if human_override:
         model.replay_buffer.add(
             np.array(obs),  
             np.array(next_obs),  
@@ -125,17 +143,30 @@ try:
             [{}]  
         )
 
-        # ✅ 1000 스텝마다 SAC 학습 실행 (사람 개입 여부와 관계없이)
-        if step % 1000 == 0:
-            model.learn(total_timesteps=1000)
+    # ✅ 1000 스텝마다 학습 실행
+    if human_override and step % 1000 == 0:
+        print(f"📢 Step {step}: Human Override detected, training for 1000 steps...")
+        model.learn(total_timesteps=1000)
 
-        obs = next_obs
-        step += 1
+    # ✅ CSV에 로그 저장
+    with open(CSV_FILE, mode="a", newline="") as file:
+        writer = csv.writer(file)
+        writer.writerow([
+            step, 
+            human_override, 
+            action[0][0],  
+            action[0][1],  
+            action[0][2]   
+        ])
 
-        print(f"Step: {step}, Human Override: {human_override}, Action: {action}")
+    obs = next_obs  
+    step += 1
+    env.render()
 
-except Exception as e:
-    print(f"🚨 오류 발생: {e}")
-finally:
-    print(f"💾 학습 로그가 '{CSV_FILE}'에 저장되었습니다.")
-    pygame.quit()
+    print(f"Step: {step}, Human Override: {human_override}, Action: {action}")
+
+# ✅ 모델 저장
+model.save(MODEL_PATH)
+print(f"💾 학습이 완료되었습니다. 모델이 '{MODEL_PATH}'에 저장되었습니다.")
+
+pygame.quit()
