@@ -64,7 +64,7 @@ def get_human_action():
     return action
 
 # ✅ HIL 학습 루프 (300만 스텝)
-obs, _ = env.reset()
+obs = env.reset()
 done = False
 total_timesteps = 3000000
 step = 0
