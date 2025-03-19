@@ -64,7 +64,7 @@ def get_human_action():
     return action
 
 # ✅ HIL 학습 루프 (300만 스텝)
-obs = env.reset()
+obs = env.reset()  
 done = False
 total_timesteps = 3000000
 step = 0
@@ -80,13 +80,14 @@ while step < total_timesteps:
         human_override = True  # 사람이 개입했음을 표시
 
     # 환경 업데이트
-    obs, reward, terminated, truncated, _ = env.step(action)
+    next_obs, reward, terminated, truncated, _ = env.step(action)
     done = terminated or truncated
     
     # 사람이 개입한 경우, 모델이 학습할 수 있도록 버퍼에 추가
     if human_override:
-        model.replay_buffer.add(obs, action, reward, terminated, truncated)
+        model.replay_buffer.add(obs, action, reward, next_obs, terminated)
 
+    obs = next_obs  # 다음 상태로 업데이트
     step += 1
     env.render()
 
