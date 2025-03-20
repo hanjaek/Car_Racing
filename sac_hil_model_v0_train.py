@@ -109,11 +109,9 @@ def get_human_action(original_action, step):
 
     action[0] = alpha * current_steering + (1 - alpha) * action[0]  # 조향 혼합
     action[1] = alpha * current_speed + (1 - alpha) * action[1]  # 속도 혼합
-    action[2] = alpha * action[2] + (1 - alpha) * action[2]  # ✅ 브레이크도 혼합
+    action[2] = alpha * action[2] + (1 - alpha) * action[2]  #  브레이크도 혼합
 
     return action
-
-
 
 # HIL 학습 루프 (300만 스텝)
 obs = env.reset()
