@@ -131,6 +131,8 @@ total_timesteps = 100000
 step = 0
 last_update_step = 0  
 
+human_intervened_in_last_1000_steps = False
+
 while step < total_timesteps:
     pygame.event.pump()  
 
@@ -140,6 +142,7 @@ while step < total_timesteps:
     if any(pygame.key.get_pressed()):  
         action = get_human_action(action, step)  
         human_override = True  
+        human_intervened_in_last_1000_steps = True
 
     action = np.array(action).reshape(1, -1)  
 
@@ -168,13 +171,11 @@ while step < total_timesteps:
     )
 
     # ✅ 사람이 한 번이라도 개입했으면 1000 스텝마다 학습 실행
-    if human_override:
-        last_update_step = step  
-    
-    if (step - last_update_step) >= 1000:  
-        print(f"📢 Step {step}: Training for 1000 steps due to human intervention...")
-        model.learn(total_timesteps=1000)
-        last_update_step = step  
+    if step % 1000 == 0:
+        if human_intervened_in_last_1000_steps:
+            print(f"📢 Step {step}: Training for 1000 steps due to human intervention...")
+            model.learn(total_timesteps=1000)
+            human_intervened_in_last_1000_steps = False  # ✅ 학습 후 초기화 
 
     obs = next_obs  
     step += 1
