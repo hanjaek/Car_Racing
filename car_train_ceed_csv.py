@@ -7,7 +7,7 @@ from stable_baselines3.common.vec_env import DummyVecEnv
 from stable_baselines3.common.monitor import Monitor
 
 # ✅ 모델 및 로그 저장할 폴더 설정
-MODEL_DIR = "ceed_model_v0"
+MODEL_DIR = "ceed_model_v1"
 LOG_DIR = "tensorboard_logs"  
 MODEL_PATH = os.path.join(MODEL_DIR, "sac_car_racing_best")
 CSV_FILE = "test.csv"  # ✅ 학습 데이터를 반영할 CSV 파일
