@@ -63,35 +63,56 @@ def get_human_action(original_action, step):
 
     steer_step = 0.1  
     speed_step = 0.05  
+    brake_step = 0.1  # ✅ 브레이크 강도 증가
     steering_recovery = 0.05  
 
+    # ✅ **조향 조정 (좌/우 방향키)**
     if keys[pygame.K_LEFT]:  
         current_steering -= steer_step  
+        action[2] = min(0.3, action[2] + brake_step)  # ✅ 좌회전 시 브레이크 추가 적용
     if keys[pygame.K_RIGHT]:  
         current_steering += steer_step  
+        action[2] = min(0.3, action[2] + brake_step)  # ✅ 우회전 시 브레이크 추가 적용
+
+    # ✅ **가속 (위 방향키)**
     if keys[pygame.K_UP]:  
-        current_speed += speed_step
+        current_speed += speed_step  
+        action[2] = 0.0  # 🚀 가속 중에는 브레이크를 완전히 해제
         if current_steering > 0:
             current_steering = max(0, current_steering - steering_recovery)
         elif current_steering < 0:
             current_steering = min(0, current_steering + steering_recovery)
-    if keys[pygame.K_DOWN]:  
-        current_speed -= speed_step  
 
+    # ✅ **브레이크 (아래 방향키)**
+    if keys[pygame.K_DOWN]:  
+        action[2] = 1.0  # 🚀 즉각적으로 최대 브레이크 적용
+        current_speed *= 0.8  # 🚀 감속 비율 적용 (속도 감소)
+
+    # ✅ 브레이크를 적용하지 않는 경우 점진적으로 감소
+    if not keys[pygame.K_DOWN] and not keys[pygame.K_LEFT] and not keys[pygame.K_RIGHT]:
+        action[2] = max(0.0, action[2] - 0.05)
+
+    # ✅ 속도가 너무 작으면 0으로 설정 (완전 정지 방지)
+    if current_speed < 0.02:  
+        current_speed = 0.0
+
+    # ✅ 값 범위 제한
     current_steering = np.clip(current_steering, -1.0, 1.0)
     current_speed = np.clip(current_speed, 0.0, 1.0)  
+    action[2] = np.clip(action[2], 0.0, 1.0)  # 브레이크 값도 제한
 
-    #  사람이 개입한 값과 SAC 모델 값의 혼합 비율 (alpha 적용)
+    # ✅ 사람이 개입한 값과 SAC 모델 값의 혼합 비율 (alpha 적용)
     if step >= max_human_steps:
         alpha = 0.0  
     else:
         alpha = max(min_alpha, initial_alpha - decay_rate * (step / max_human_steps))
 
-    action[0] = alpha * current_steering + (1 - alpha) * action[0]  
-    action[1] = alpha * current_speed + (1 - alpha) * action[1]  
-    action[2] = 0.0  
+    action[0] = alpha * current_steering + (1 - alpha) * action[0]  # 조향 혼합
+    action[1] = alpha * current_speed + (1 - alpha) * action[1]  # 속도 혼합
+    action[2] = alpha * action[2] + (1 - alpha) * action[2]  # ✅ 브레이크도 혼합
 
     return action
+
 
 
 # HIL 학습 루프 (300만 스텝)
