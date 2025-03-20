@@ -48,7 +48,7 @@ except:
 current_steering = 0.0  # 현재 조향 값 (-1.0 ~ 1.0)
 current_speed = 0.0     # 현재 속도 (0.0 ~ 1.0)
 
-# 키 입력을 받아 사람이 개입할 수 있도록 하는 함수
+# 키입력을 통한 인간 개입
 def get_human_action(original_action):
     global current_steering, current_speed
     
@@ -59,22 +59,22 @@ def get_human_action(original_action):
     speed_step = 0.05  # 속도 조절 강도
     steering_recovery = 0.05  # 가속 시 직진 회복 강도
 
-    # **왼쪽/오른쪽 방향키 누를 때마다 점진적 조정**
+    # 왼쪽/오른쪽 방향키 누를 때마다 점진적 조정
     if keys[pygame.K_LEFT]:  
         current_steering -= steer_step  # 좌회전
     if keys[pygame.K_RIGHT]:  
         current_steering += steer_step  # 우회전
 
-    # **위 방향키(가속) 누르면 점진적으로 속도 증가 (버튼 떼도 유지)**
+    # 위 방향키(가속) 누르면 점진적으로 속도 증가 (버튼 떼도 유지)
     if keys[pygame.K_UP]:  
         current_speed += speed_step
-        # 🚀 **가속 중에는 조향을 점진적으로 0으로 복귀 (직진)**
+        # 가속 중에는 조향을 점진적으로 0으로 복귀 (직진)
         if current_steering > 0:
             current_steering = max(0, current_steering - steering_recovery)
         elif current_steering < 0:
             current_steering = min(0, current_steering + steering_recovery)
 
-    # **아래 방향키(감속) 누르면 점진적으로 속도 감소 (버튼 떼도 유지)**
+    # 아래 방향키(감속) 누르면 점진적으로 속도 감소 (버튼 떼도 유지)
     if keys[pygame.K_DOWN]:  
         current_speed -= speed_step  
 
@@ -97,6 +97,8 @@ done = False
 total_timesteps = 3000000
 step = 0
 
+update_on = False  # 🚀 사람이 개입했는지 여부를 추적하는 변수
+
 while step < total_timesteps:
     pygame.event.pump()  
 
@@ -106,6 +108,7 @@ while step < total_timesteps:
     if any(pygame.key.get_pressed()):  
         action = get_human_action(action)
         human_override = True  
+        update_on = True  # 🚀 사람이 개입했으므로 학습을 예약
 
     action = np.array(action).reshape(1, -1)  
 
@@ -125,27 +128,29 @@ while step < total_timesteps:
     # **obs와 next_obs를 (1, 3, 96, 96)로 변환**
     next_obs = next_obs.transpose(0, 3, 1, 2)  
 
-    # 사람이 개입한 경우만 모델 학습 데이터로 추가
-    if human_override:
-        model.replay_buffer.add(
-            np.array(obs),  
-            np.array(next_obs),  
-            np.array(action),  
-            np.array([reward]),  
-            np.array([terminated]),  
-            [{}]  
-        )
+    # ✅ SAC 모델의 주행 데이터도 학습 데이터로 추가
+    model.replay_buffer.add(
+        np.array(obs),  
+        np.array(next_obs),  
+        np.array(action),  
+        np.array([reward]),  
+        np.array([terminated]),  
+        [{}]  
+    )
 
-    # 1000 스텝마다 학습 실행
-    if human_override and step % 1000 == 0:
-        print(f"📢 Step {step}: Human Override detected, training for 1000 steps...")
+    # ✅ 1000 스텝마다 학습 실행 (사람이 한 번이라도 개입했으면 실행)
+    if update_on and step % 1000 == 0:
+        print(f"📢 Step {step}: Human Override detected earlier, training for 1000 steps...")
         model.learn(total_timesteps=1000)
+        update_on = False  # 🚀 학습 실행 후 리셋
 
     obs = next_obs  
     step += 1
     env.render()
 
     print(f"Step: {step}, Human Override: {human_override}, Action: {action}")
+
+
 
 # 모델 저장
 model.save(MODEL_PATH)
