@@ -108,7 +108,7 @@ model.learn(total_timesteps=5000)
 
 # ✅ 기존 학습을 유지하며 300만 스텝 추가 학습
 print("📢 SAC 모델을 기존 학습 방식으로 300만 스텝 추가 학습합니다...")
-model.learn(total_timesteps=3000000)
+model.learn(total_timesteps=1000000)
 
 # ✅ 모델 저장
 model.save(MODEL_PATH)

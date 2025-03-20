@@ -49,7 +49,7 @@ except:
     )
 
 # ✅ 학습 수행 (항상 동일한 트랙에서 학습)
-model.learn(total_timesteps=3000000)
+model.learn(total_timesteps=1000000)
 
 # ✅ 모델 저장
 model.save(MODEL_PATH)
