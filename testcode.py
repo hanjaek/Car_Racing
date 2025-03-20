@@ -62,7 +62,7 @@ current_speed = 0.0
 initial_alpha = 0.9  
 min_alpha = 0.0  
 decay_rate = 0.5  
-max_human_steps = 1_000_000  
+max_human_steps = 30000
 
 # ✅ 키입력을 통한 인간 개입
 def get_human_action(original_action, step):
@@ -124,11 +124,10 @@ def get_human_action(original_action, step):
     return action
 
 
-# ✅ HIL 학습 루프 (300만 스텝)
 obs = env.reset()
 obs = obs.transpose(0, 3, 1, 2)  
 done = False
-total_timesteps = 3000000
+total_timesteps = 100000
 step = 0
 last_update_step = 0  
 
