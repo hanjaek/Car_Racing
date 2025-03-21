@@ -6,17 +6,23 @@ from stable_baselines3.common.vec_env import DummyVecEnv
 from stable_baselines3.common.monitor import Monitor
 
 # 모델 저장된 폴더 경로
-MODEL_DIR = "model"
+MODEL_DIR = "ceed_model_v0"
 MODEL_PATH = os.path.join(MODEL_DIR, "sac_car_racing_best")
 
+# ✅ SEED 설정 (항상 동일한 트랙 등장)
+SEED = 1  
+
 # CarRacing 환경 생성 (테스트 모드)
-env = gym.make("CarRacing-v3", domain_randomize=False, render_mode="human")
+def make_env():
+    def _init():
+        env = gym.make("CarRacing-v3", domain_randomize=False, render_mode="human")
+        env.reset(seed=SEED)  # ✅ 트랙 고정
+        return env
+    return _init
 
-# Monitor로 환경 감시
-env = Monitor(env)
-
-# 벡터 환경으로 래핑 (테스트 환경에서는 없어도 가능)
-env = DummyVecEnv([lambda: env])
+# ✅ 환경 생성 (SEED 적용)
+env = DummyVecEnv([make_env()])
+env.seed(SEED)
 
 # 학습된 모델 로드
 model = SAC.load(MODEL_PATH)
