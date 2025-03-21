@@ -26,6 +26,7 @@ SEED = 1
 def make_env():
     def _init():
         env = gym.make("CarRacing-v3", domain_randomize=False, render_mode="human")
+        env = Monitor(env, filename=os.path.join(LOG_DIR, "SAC_HIL_ceed1.csv"))  
         env.reset(seed=SEED)  # ✅ 트랙 고정
         return env
     return _init
@@ -62,7 +63,7 @@ current_speed = 0.0
 initial_alpha = 0.9  
 min_alpha = 0.0  
 decay_rate = 0.5  
-max_human_steps = 30000
+max_human_steps = 300000  # 30만 스텝까지만 개입 가능
 
 # ✅ 키입력을 통한 인간 개입
 def get_human_action(original_action, step):
@@ -113,7 +114,7 @@ def get_human_action(original_action, step):
 
     # ✅ 사람이 개입한 값과 SAC 모델 값의 혼합 비율 (alpha 적용)
     if step >= max_human_steps:
-        alpha = 0.0  
+        alpha = 0.0  # 30만 스텝 이후에는 사람이 개입할 수 없음
     else:
         alpha = max(min_alpha, initial_alpha - decay_rate * (step / max_human_steps))
 
@@ -127,7 +128,7 @@ def get_human_action(original_action, step):
 obs = env.reset()
 obs = obs.transpose(0, 3, 1, 2)  
 done = False
-total_timesteps = 100000
+total_timesteps = 1000000  # 총 100만 스텝
 step = 0
 last_update_step = 0  
 
@@ -139,7 +140,7 @@ while step < total_timesteps:
     human_override = False  
     action = model.predict(obs, deterministic=True)[0]  
 
-    if any(pygame.key.get_pressed()):  
+    if step < max_human_steps and any(pygame.key.get_pressed()):  
         action = get_human_action(action, step)  
         human_override = True  
         human_intervened_in_last_1000_steps = True
@@ -170,18 +171,22 @@ while step < total_timesteps:
         [{}]  
     )
 
-    # ✅ 사람이 한 번이라도 개입했으면 1000 스텝마다 학습 실행
-    if step % 1000 == 0:
+    # ✅ 사람이 개입한 데이터로 1000 스텝마다 학습 (30만 스텝까지)
+    if step < max_human_steps and step % 1000 == 0:
         if human_intervened_in_last_1000_steps:
             print(f"📢 Step {step}: Training for 1000 steps due to human intervention...")
-            model.learn(total_timesteps=1000)
-            human_intervened_in_last_1000_steps = False  # ✅ 학습 후 초기화 
+            model.learn(total_timesteps=1000, reset_num_timesteps=False)
+            human_intervened_in_last_1000_steps = False  
 
     obs = next_obs  
     step += 1
     env.render()
 
     print(f"Step: {step}, Human Override: {human_override}, Action: {action}")
+
+# ✅ 30만 스텝 이후, 저장된 데이터를 바탕으로 추가 학습 (70만 스텝)
+print("🚀 30만 스텝 이후 에이전트 데이터를 기반으로 70만 스텝 학습을 시작합니다...")
+model.learn(total_timesteps=700000, reset_num_timesteps=False)
 
 # ✅ 모델 저장
 model.save(MODEL_PATH)

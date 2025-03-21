@@ -20,6 +20,7 @@ SEED = 1  # 트랙을 고정하기 위한 SEED 값
 def make_env():
     def _init():
         env = gym.make("CarRacing-v3", domain_randomize=False, render_mode="rgb_array")
+        env = Monitor(env, filename=os.path.join(LOG_DIR, "SAC_ceed1.csv"))  
         env.reset(seed=SEED)  # ✅ 트랙 고정
         return env
     return _init
@@ -49,7 +50,7 @@ except:
     )
 
 # ✅ 학습 수행 (항상 동일한 트랙에서 학습)
-model.learn(total_timesteps=100000)
+model.learn(total_timesteps=1000000, log_interval=10)
 
 # ✅ 모델 저장
 model.save(MODEL_PATH)

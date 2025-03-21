@@ -163,7 +163,7 @@ while step < total_timesteps:
     
     if (step - last_update_step) >= 1000:  
         print(f"📢 Step {step}: Training for 1000 steps due to human intervention...")
-        model.learn(total_timesteps=1000)
+        model.learn(total_timesteps=1000, reset_num_timesteps=False)
         last_update_step = step  #  학습 후 마지막 학습 스텝 갱신
 
     obs = next_obs  
