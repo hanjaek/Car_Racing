@@ -9,6 +9,10 @@ from stable_baselines3.common.buffers import ReplayBuffer
 
 # ✅ Custom ReplayBuffer with human intervention prioritization
 class HumanPrioritizedReplayBuffer(ReplayBuffer):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.human_flags = np.zeros(self.buffer_size, dtype=bool)
+
     def _init_storage(self):
         super()._init_storage()
         self.human_flags = np.zeros(self.buffer_size, dtype=bool)
@@ -19,8 +23,9 @@ class HumanPrioritizedReplayBuffer(ReplayBuffer):
         self.human_flags[self.pos - 1] = human_flag
 
     def sample(self, batch_size, env=None):
-        human_indices = np.where(self.human_flags[:self.size])[0]
-        other_indices = np.where(~self.human_flags[:self.size])[0]
+        size = int(self.size())  # 👈 여기 추가
+        human_indices = np.where(self.human_flags[:size])[0]
+        other_indices = np.where(~self.human_flags[:size])[0]
 
         n_human = int(batch_size * 0.7)
         n_other = batch_size - n_human
@@ -33,6 +38,7 @@ class HumanPrioritizedReplayBuffer(ReplayBuffer):
 
         chosen = np.array(chosen)
         return super()._get_samples(chosen, env=env)
+
 
 # Pygame 초기화
 pygame.init()
@@ -68,7 +74,7 @@ except:
         "CnnPolicy",
         env,
         replay_buffer_class=HumanPrioritizedReplayBuffer,
-        replay_buffer_kwargs=dict(buffer_size=1000000),
+        buffer_size=1000000,
         learning_rate=3e-4,
         batch_size=256,
         tau=0.005,
