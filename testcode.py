@@ -12,9 +12,9 @@ screen = pygame.display.set_mode((400, 300))
 pygame.display.set_caption("HIL Control Window")
 
 # 모델 및 로그 저장 폴더 설정
-MODEL_DIR = "sac_hil_model_v0"
+MODEL_DIR = "testcode"
 LOG_DIR = "tensorboard_logs"
-MODEL_PATH = os.path.join(MODEL_DIR, "sac_car_racing_best")
+MODEL_PATH = os.path.join(MODEL_DIR, "testmodel")
 
 os.makedirs(MODEL_DIR, exist_ok=True)
 os.makedirs(LOG_DIR, exist_ok=True)
@@ -26,7 +26,7 @@ SEED = 1
 def make_env():
     def _init():
         env = gym.make("CarRacing-v3", domain_randomize=False, render_mode="human")
-        env = Monitor(env, filename=os.path.join(LOG_DIR, "SAC_HIL_ceed1.csv"))  
+        env = Monitor(env, filename=os.path.join(LOG_DIR, "testcode.csv"))  
         env.reset(seed=SEED)  # ✅ 트랙 고정
         return env
     return _init
@@ -63,7 +63,7 @@ current_speed = 0.0
 initial_alpha = 0.9  
 min_alpha = 0.0  
 decay_rate = 0.5  
-max_human_steps = 100000  # 10만 스텝까지만 개입 가능
+max_human_steps = 10000  # 10만 스텝까지만 개입 가능
 
 # ✅ 키입력을 통한 인간 개입
 def get_human_action(original_action, step):
@@ -128,7 +128,7 @@ def get_human_action(original_action, step):
 obs = env.reset()
 obs = obs.transpose(0, 3, 1, 2)  
 done = False
-total_timesteps = 1000000  # 총 100만 스텝
+total_timesteps = 100000  # 총 100만 스텝
 step = 0
 last_update_step = 0  
 
@@ -187,14 +187,20 @@ while step < total_timesteps:
     # 사람이 개입을 끝낸 시점에 모델 + 리플레이 버퍼 저장
     if step == max_human_steps:
         print("💾 사람 개입 모델 + 리플레이 버퍼 저장 중...")
-        model.save("sac_hil_model_v0/after_human_model.zip")
-        model.save_replay_buffer("sac_hil_model_v0/human_buffer.pkl")
+        model.save("testcode/testmodel.zip")
+        model.save_replay_buffer("testcode/test_buffer.pkl")
+
+    if done:
+        obs = env.reset()
+        obs = obs.transpose(0, 3, 1, 2)
+        continue
+
 
 # ✅ 10만 스텝 이후, 사람 개입 데이터 기반으로 학습 재시작
 print("🚀 사람 개입 데이터 기반으로 90만 스텝 학습을 시작합니다...")
-model = SAC.load("sac_hil_model_v0/after_human_model.zip", env=env, tensorboard_log=LOG_DIR)
-model.load_replay_buffer("sac_hil_model_v0/human_buffer.pkl")
-model.learn(total_timesteps=900000, reset_num_timesteps=False)
+model = SAC.load("testcode/testmodel.zip", env=env, tensorboard_log=LOG_DIR)
+model.load_replay_buffer("testcode/test_buffer.pkl")
+model.learn(total_timesteps=90000, reset_num_timesteps=False)
 
 # ✅ 모델 저장
 model.save(MODEL_PATH)
