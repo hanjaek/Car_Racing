@@ -125,7 +125,7 @@ def get_human_action(original_action, step):
     return action
 
 
-obs = env.reset()
+obs = env.reset(seed=SEED)
 obs = obs.transpose(0, 3, 1, 2)  
 done = False
 total_timesteps = 1000000  # 총 100만 스텝
@@ -189,6 +189,12 @@ while step < total_timesteps:
         print("💾 사람 개입 모델 + 리플레이 버퍼 저장 중...")
         model.save("sac_hil_model_v0/after_human_model.zip")
         model.save_replay_buffer("sac_hil_model_v0/human_buffer.pkl")
+
+    if done:
+        obs = env.reset(seed=SEED)
+        obs = obs.transpose(0, 3, 1, 2)
+        continue
+
 
 # ✅ 10만 스텝 이후, 사람 개입 데이터 기반으로 학습 재시작
 print("🚀 사람 개입 데이터 기반으로 90만 스텝 학습을 시작합니다...")
