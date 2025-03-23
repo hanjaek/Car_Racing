@@ -60,7 +60,7 @@ current_steering = 0.0
 current_speed = 0.0     
 
 # ✅ 사람이 개입하는 정도를 조절하는 하이퍼파라미터
-initial_alpha = 0.9  
+initial_alpha = 0.5  
 min_alpha = 0.0  
 decay_rate = 0.5  
 max_human_steps = 100000  # 10만 스텝까지만 개입 가능
@@ -191,9 +191,12 @@ while step < total_timesteps:
         model.save_replay_buffer("sac_hil_model_v0/human_buffer.pkl")
 
     if done:
+        current_steering = 0.0
+        current_speed = 0.0
         obs = env.reset()
         obs = obs.transpose(0, 3, 1, 2)
         continue
+
 
 
 # ✅ 10만 스텝 이후, 사람 개입 데이터 기반으로 학습 재시작
