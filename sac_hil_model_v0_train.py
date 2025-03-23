@@ -184,8 +184,16 @@ while step < total_timesteps:
 
     print(f"Step: {step}, Human Override: {human_override}, Action: {action}")
 
-# ✅ 10만 스텝 이후, 저장된 데이터를 바탕으로 추가 학습 (90만 스텝)
-print("🚀 10만 스텝 이후 에이전트 데이터를 기반으로 90만 스텝 학습을 시작합니다...")
+    # 사람이 개입을 끝낸 시점에 모델 + 리플레이 버퍼 저장
+    if step == max_human_steps:
+        print("💾 사람 개입 모델 + 리플레이 버퍼 저장 중...")
+        model.save("sac_hil_model_v0/after_human_model.zip")
+        model.save_replay_buffer("sac_hil_model_v0/human_buffer.pkl")
+
+# ✅ 10만 스텝 이후, 사람 개입 데이터 기반으로 학습 재시작
+print("🚀 사람 개입 데이터 기반으로 90만 스텝 학습을 시작합니다...")
+model = SAC.load("sac_hil_model_v0/after_human_model.zip", env=env, tensorboard_log=LOG_DIR)
+model.load_replay_buffer("sac_hil_model_v0/human_buffer.pkl")
 model.learn(total_timesteps=900000, reset_num_timesteps=False)
 
 # ✅ 모델 저장
