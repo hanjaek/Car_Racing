@@ -60,7 +60,7 @@ current_steering = 0.0
 current_speed = 0.0     
 
 # ✅ 사람이 개입하는 정도를 조절하는 하이퍼파라미터
-initial_alpha = 0.5  
+initial_alpha = 0.9
 min_alpha = 0.0  
 decay_rate = 0.5  
 max_human_steps = 100000  # 10만 스텝까지만 개입 가능
