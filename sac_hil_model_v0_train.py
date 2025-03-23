@@ -63,7 +63,7 @@ current_speed = 0.0
 initial_alpha = 0.9  
 min_alpha = 0.0  
 decay_rate = 0.5  
-max_human_steps = 300000  # 30만 스텝까지만 개입 가능
+max_human_steps = 100000  # 10만 스텝까지만 개입 가능
 
 # ✅ 키입력을 통한 인간 개입
 def get_human_action(original_action, step):
@@ -114,7 +114,7 @@ def get_human_action(original_action, step):
 
     # ✅ 사람이 개입한 값과 SAC 모델 값의 혼합 비율 (alpha 적용)
     if step >= max_human_steps:
-        alpha = 0.0  # 30만 스텝 이후에는 사람이 개입할 수 없음
+        alpha = 0.0  # 10만 스텝 이후에는 사람이 개입할 수 없음
     else:
         alpha = max(min_alpha, initial_alpha - decay_rate * (step / max_human_steps))
 
@@ -171,7 +171,7 @@ while step < total_timesteps:
         [{}]  
     )
 
-    # ✅ 사람이 개입한 데이터로 1000 스텝마다 학습 (30만 스텝까지)
+    # ✅ 사람이 개입한 데이터로 1000 스텝마다 학습 (10만 스텝까지)
     if step < max_human_steps and step % 1000 == 0:
         if human_intervened_in_last_1000_steps:
             print(f"📢 Step {step}: Training for 1000 steps due to human intervention...")
@@ -184,9 +184,9 @@ while step < total_timesteps:
 
     print(f"Step: {step}, Human Override: {human_override}, Action: {action}")
 
-# ✅ 30만 스텝 이후, 저장된 데이터를 바탕으로 추가 학습 (70만 스텝)
-print("🚀 30만 스텝 이후 에이전트 데이터를 기반으로 70만 스텝 학습을 시작합니다...")
-model.learn(total_timesteps=700000, reset_num_timesteps=False)
+# ✅ 10만 스텝 이후, 저장된 데이터를 바탕으로 추가 학습 (90만 스텝)
+print("🚀 10만 스텝 이후 에이전트 데이터를 기반으로 90만 스텝 학습을 시작합니다...")
+model.learn(total_timesteps=900000, reset_num_timesteps=False)
 
 # ✅ 모델 저장
 model.save(MODEL_PATH)
