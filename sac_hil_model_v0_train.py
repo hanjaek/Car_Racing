@@ -125,7 +125,7 @@ def get_human_action(original_action, step):
     return action
 
 
-obs = env.reset(seed=SEED)
+obs = env.reset()
 obs = obs.transpose(0, 3, 1, 2)  
 done = False
 total_timesteps = 1000000  # 총 100만 스텝
@@ -191,7 +191,7 @@ while step < total_timesteps:
         model.save_replay_buffer("sac_hil_model_v0/human_buffer.pkl")
 
     if done:
-        obs = env.reset(seed=SEED)
+        obs = env.reset()
         obs = obs.transpose(0, 3, 1, 2)
         continue
 
