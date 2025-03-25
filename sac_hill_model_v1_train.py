@@ -8,6 +8,7 @@ from stable_baselines3.common.vec_env import DummyVecEnv
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.buffers import ReplayBuffer
 
+
 # ============================== 설정 ==============================
 
 SEED = 1
@@ -22,6 +23,51 @@ os.makedirs(MODEL_DIR, exist_ok=True)
 os.makedirs(LOG_DIR, exist_ok=True)
 
 # ============================== 환경 설정 ==============================
+class CnnReplayBuffer(ReplayBuffer):
+    def __init__(
+        self,
+        buffer_size,
+        observation_space,
+        action_space,
+        device,
+        n_envs=1,
+        optimize_memory_usage=False,
+        handle_timeout_termination=True,
+    ):
+        # 수동으로 shape 지정
+        self.image_obs = True
+        super().__init__(
+            buffer_size=buffer_size,
+            observation_space=observation_space,
+            action_space=action_space,
+            device=device,
+            n_envs=n_envs,
+            optimize_memory_usage=optimize_memory_usage,
+            handle_timeout_termination=handle_timeout_termination,
+        )
+
+    def _initialize_buffers(self):
+        # 이미지 관측값에 맞게 obs 버퍼 초기화
+        self.observations = np.zeros(
+            (self.buffer_size, *self.observation_space.shape), dtype=np.uint8
+        )
+        self.next_observations = np.zeros(
+            (self.buffer_size, *self.observation_space.shape), dtype=np.uint8
+        )
+        self.actions = np.zeros(
+            (self.buffer_size, self.action_dim), dtype=np.float32
+        )
+        self.rewards = np.zeros((self.buffer_size,), dtype=np.float32)
+        self.dones = np.zeros((self.buffer_size,), dtype=np.float32)
+        self.timeouts = np.zeros((self.buffer_size,), dtype=np.float32)  # for timeout terminations
+        self.pos = 0
+        self.full = False
+
+    def _normalize_obs(self, obs):
+        return obs  # 정규화는 하지 않음
+
+    def sample(self, batch_size, env=None):
+        return super().sample(batch_size, env)
 
 def make_env():
     def _init():
@@ -60,14 +106,27 @@ except:
 
 obs_shape = model.observation_space.shape
 action_dim = model.action_space.shape[0]
-human_buffer = ReplayBuffer(100000, obs_shape, (action_dim,), model.device, handle_timeout_termination=True)
-agent_buffer = ReplayBuffer(1000000, obs_shape, (action_dim,), model.device, handle_timeout_termination=True)
+human_buffer = CnnReplayBuffer(
+    buffer_size=100000,
+    observation_space=model.observation_space,
+    action_space=model.action_space,
+    device=model.device
+)
+
+agent_buffer = CnnReplayBuffer(
+    buffer_size=1000000,
+    observation_space=model.observation_space,
+    action_space=model.action_space,
+    device=model.device
+)
+
+
 
 # ============================== 키 입력 초기화 ==============================
 
-pygame.init()
-screen = pygame.display.set_mode((400, 300))
-pygame.display.set_caption("HIL Control Window")
+# pygame.init()
+# screen = pygame.display.set_mode((400, 300))
+# pygame.display.set_caption("HIL Control Window")
 current_steering, current_speed = 0.0, 0.0
 
 # ============================== 개입 파라미터 ==============================
