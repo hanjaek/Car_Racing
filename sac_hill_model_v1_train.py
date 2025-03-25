@@ -7,6 +7,7 @@ from stable_baselines3 import SAC
 from stable_baselines3.common.vec_env import DummyVecEnv
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.buffers import ReplayBuffer
+import pickle
 
 
 # ============================== 설정 ==============================
@@ -79,6 +80,14 @@ def make_env():
 
 env = DummyVecEnv([make_env()])
 env.seed(SEED)
+
+def save_buffer(buffer, path):
+    with open(path, 'wb') as f:
+        pickle.dump(buffer, f)
+
+def load_buffer(path):
+    with open(path, 'rb') as f:
+        return pickle.load(f)
 
 # ============================== 모델 로드 ==============================
 
@@ -245,11 +254,17 @@ while step < total_timesteps:
     env.render()
     print(f"Step: {step}, Human Override: {human_override}, Action: {action}, Reward: {reward}")
 
+    if step % 10000 == 0 and step != 0:
+        print(f"💾 Step {step}: 버퍼 자동 저장 중...")
+        save_buffer(human_buffer, HUMAN_BUFFER_PATH)
+        save_buffer(agent_buffer, AGENT_BUFFER_PATH)
+
     if step == max_human_steps:
         print("💾 사람 개입 모델 + 리플레이 버퍼 저장 중...")
         model.save(HUMAN_MODEL_PATH)
-        human_buffer.save(HUMAN_BUFFER_PATH)
-        agent_buffer.save(AGENT_BUFFER_PATH)
+        human_buffer = load_buffer(HUMAN_BUFFER_PATH)
+        agent_buffer = load_buffer(AGENT_BUFFER_PATH)
+
 
     if done:
         current_steering, current_speed = 0.0, 0.0
