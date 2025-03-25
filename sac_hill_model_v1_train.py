@@ -102,6 +102,9 @@ except:
         seed=SEED
     )
 
+
+model.learn(total_timesteps=1, log_interval=10, reset_num_timesteps=False)
+
 # ============================== Dual Buffer 생성 ==============================
 
 obs_shape = model.observation_space.shape
