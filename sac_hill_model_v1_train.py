@@ -11,7 +11,7 @@ from stable_baselines3.common.buffers import ReplayBuffer
 # ============================== 설정 ==============================
 
 SEED = 1
-MODEL_DIR = "sac_hil_model_v0"
+MODEL_DIR = "sac_hil_model_v1"
 LOG_DIR = "tensorboard_logs"
 MODEL_PATH = os.path.join(MODEL_DIR, "sac_car_racing_best")
 HUMAN_MODEL_PATH = os.path.join(MODEL_DIR, "after_human_model.zip")
