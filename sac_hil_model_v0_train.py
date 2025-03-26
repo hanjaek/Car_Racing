@@ -101,15 +101,16 @@ def get_human_action(original_action, step):
     alpha = max(min_alpha, initial_alpha - decay_rate * (step / max_human_steps)) if step < max_human_steps else 0.0
     action[0] = alpha * current_steering + (1 - alpha) * action[0]  # 조향 혼합
     action[1] = alpha * current_speed + (1 - alpha) * action[1]     # 속도 혼합
+    action[1] = np.clip(action[1], 0.0, 0.7)
 
     return action
 
 # ------------------------ 개입 여부에 따라 학습 수행 ------------------------
 def train_if_human_intervened(step):
     global human_intervened
-    if step < max_human_steps and step % 5000 == 0 and human_intervened:
-        print(f"📢 Step {step}: 사람 개입 → 5000 스텝 학습")
-        model.learn(total_timesteps=5000, reset_num_timesteps=False)
+    if step < max_human_steps and step % 500 == 0 and human_intervened:
+        print(f"📢 Step {step}: 사람 개입 → 500 스텝 학습")
+        model.learn(total_timesteps=500, reset_num_timesteps=False)
         human_intervened = False
 
 # ------------------------ 메인 루프 ------------------------
