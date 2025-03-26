@@ -158,10 +158,18 @@ while step < total_timesteps:
         obs = env.reset()
         obs = obs.transpose(0, 3, 1, 2)
 
-# 사람 개입 기반으로 후속 학습 (90만 스텝)
-print("🚀 사람 개입 데이터를 기반으로 90만 스텝 학습 시작")
+# 사람 개입 기반으로 후속 학습 시작
+print("🚀 사람 개입 데이터를 기반으로 반복 학습 시작")
+
 model = SAC.load(os.path.join(MODEL_DIR, "after_human_model.zip"), env=env, tensorboard_log=LOG_DIR)
-model.learn(total_timesteps=900_000, reset_num_timesteps=False)
+
+# 사람이 개입한 10만 스텝 동안의 데이터를 여러 번 리플레이
+print("🔁 사람 개입 데이터 재학습 (pre-train 5만 스텝)")
+model.learn(total_timesteps=50000, reset_num_timesteps=False)
+
+# 그 다음 전체 학습 진행 (85만 스텝)
+print("🚀 본 학습 시작 (850,000 스텝)")
+model.learn(total_timesteps=850000, reset_num_timesteps=False)
 
 model.save(MODEL_PATH)
 print(f"✅ 학습 완료! 최종 모델 저장됨 → {MODEL_PATH}")
