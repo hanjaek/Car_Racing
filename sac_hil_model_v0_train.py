@@ -62,7 +62,7 @@ current_speed = 0.0
 initial_alpha = 0.9        # 사람 개입 비율 초기값
 min_alpha = 0.0            # 최소 개입 비율
 decay_rate = 0.5           # 개입 비율 감소 속도
-max_human_steps = 10000    # 사람 개입 허용 최대 스텝 수
+max_human_steps = 50000    # 사람 개입 허용 최대 스텝 수
 
 # ------------------------ 인간 개입 함수 ------------------------
 def get_human_action(original_action, step):
@@ -118,8 +118,10 @@ obs = obs.transpose(0, 3, 1, 2)
 step = 0
 total_timesteps = 1_000_000
 human_intervened = False
+# 브레이크 감지 변수
+brake_duration = 0  
 
-while step < total_timesteps:
+while step <= max_human_steps:
     pygame.event.pump()
     action = model.predict(obs, deterministic=True)[0]
 
@@ -135,6 +137,16 @@ while step < total_timesteps:
         terminated, truncated = done, False
     else:
         next_obs, reward, terminated, truncated, info = result
+
+   
+    # ------------------------ 브레이크 지속 시 패널티 ------------------------
+
+    if action[0][2] > 0.5 and current_speed < 0.2:
+        reward -= 0.1  # 속도 없는데 브레이크 밟으면 감점
+
+    elif action[0][2] > 0.6:
+        reward -= 0.01  # 브레이크는 살짝 감점만
+
 
     done = terminated or truncated
     next_obs = next_obs.transpose(0, 3, 1, 2)
@@ -154,6 +166,11 @@ while step < total_timesteps:
         print("💾 모델 저장 (사람 개입 종료 시점)")
         model.save(os.path.join(MODEL_DIR, "after_human_model.zip"))
 
+        print("🎯 사람 개입 직후, 집중 학습 시작 (5만 스텝)")
+        model.learn(total_timesteps=50000, reset_num_timesteps=False)
+        model.save(os.path.join(MODEL_DIR, "after_human_learned_model.zip"))
+
+
     if done:
         current_steering, current_speed = 0.0, 0.0
         obs = env.reset()
@@ -162,13 +179,13 @@ while step < total_timesteps:
 # ------------------------ 사람 개입 이후 반복 학습 ------------------------
 print("🚀 사람 개입 데이터를 기반으로 반복 학습 시작")
 
-model = SAC.load(os.path.join(MODEL_DIR, "after_human_model.zip"), env=env, tensorboard_log=LOG_DIR)
+model = SAC.load(os.path.join(MODEL_DIR, "after_human_learned_model.zip"), env=env, tensorboard_log=LOG_DIR)
 
 print("🔁 사람 개입 데이터 재학습 (pre-train 5만 스텝)")
 model.learn(total_timesteps=50000, reset_num_timesteps=False)
 
-print("🚀 본 학습 시작 (850,000 스텝)")
-model.learn(total_timesteps=850000, reset_num_timesteps=False)
+print("🚀 본 학습 시작 (900,000 스텝)")
+model.learn(total_timesteps=900000, reset_num_timesteps=False)
 
 # ------------------------ 최종 모델 저장 ------------------------
 model.save(MODEL_PATH)
