@@ -6,21 +6,22 @@ from stable_baselines3 import SAC
 from stable_baselines3.common.vec_env import DummyVecEnv
 from stable_baselines3.common.monitor import Monitor
 
-# Pygame 초기화
+# ------------------------ Pygame 초기화 ------------------------
 pygame.init()
 screen = pygame.display.set_mode((400, 300))
 pygame.display.set_caption("HIL Control Window")
 
-# 디렉토리 설정
+# ------------------------ 디렉토리 설정 ------------------------
 MODEL_DIR = "sac_hil_model_v0"
 LOG_DIR = "tensorboard_logs"
 MODEL_PATH = os.path.join(MODEL_DIR, "sac_car_racing_best")
 os.makedirs(MODEL_DIR, exist_ok=True)
 os.makedirs(LOG_DIR, exist_ok=True)
 
-# Seed 설정
+# ------------------------ Seed 설정 ------------------------
 SEED = 1
 
+# ------------------------ 환경 생성 함수 ------------------------
 def make_env():
     def _init():
         env = gym.make("CarRacing-v3", domain_randomize=False, render_mode="human")
@@ -29,11 +30,11 @@ def make_env():
         return env
     return _init
 
-# 환경 생성
+# ------------------------ 환경 생성 ------------------------
 env = DummyVecEnv([make_env()])
 env.seed(SEED)
 
-# 기존 모델 불러오기 또는 새 모델 생성
+# ------------------------ 모델 로드 또는 새로 생성 ------------------------
 try:
     model = SAC.load(MODEL_PATH, env=env, tensorboard_log=LOG_DIR)
     print(f"✅ 기존 모델 로드 완료: {MODEL_PATH}")
@@ -53,26 +54,26 @@ except:
         tensorboard_log=LOG_DIR
     )
 
-# 사람 조작 관련 변수
+# ------------------------ 제어 변수 초기화 ------------------------
 current_steering = 0.0
 current_speed = 0.0
 
-# HIL 하이퍼파라미터
-initial_alpha = 0.9
-min_alpha = 0.0
-decay_rate = 0.5
-max_human_steps = 100000
+# ------------------------ HIL 하이퍼파라미터 ------------------------
+initial_alpha = 0.9        # 사람 개입 비율 초기값
+min_alpha = 0.0            # 최소 개입 비율
+decay_rate = 0.5           # 개입 비율 감소 속도
+max_human_steps = 10000    # 사람 개입 허용 최대 스텝 수
 
-# 키보드 입력 기반 사람 개입 액션 생성
+# ------------------------ 인간 개입 함수 ------------------------
 def get_human_action(original_action, step):
     global current_steering, current_speed
     keys = pygame.key.get_pressed()
     action = np.array(original_action, dtype=np.float32).reshape(-1)
 
-    steer_step = 0.1
-    speed_step = 0.05
-    brake_step = 0.1
-    steering_recovery = 0.05
+    steer_step = 0.1         # 좌우 조향 변화량
+    speed_step = 0.05        # 전진 가속 변화량
+    brake_step = 0.1         # 브레이크 강도
+    steering_recovery = 0.05 # 조향 복원 속도
 
     if keys[pygame.K_LEFT]:
         current_steering -= steer_step
@@ -98,12 +99,12 @@ def get_human_action(original_action, step):
     action[2] = np.clip(action[2], 0.0, 1.0)
 
     alpha = max(min_alpha, initial_alpha - decay_rate * (step / max_human_steps)) if step < max_human_steps else 0.0
-    action[0] = alpha * current_steering + (1 - alpha) * action[0]
-    action[1] = alpha * current_speed + (1 - alpha) * action[1]
+    action[0] = alpha * current_steering + (1 - alpha) * action[0]  # 조향 혼합
+    action[1] = alpha * current_speed + (1 - alpha) * action[1]     # 속도 혼합
 
     return action
 
-# 1000 스텝마다 사람 개입 있으면 학습
+# ------------------------ 개입 여부에 따라 학습 수행 ------------------------
 def train_if_human_intervened(step):
     global human_intervened
     if step < max_human_steps and step % 1000 == 0 and human_intervened:
@@ -111,7 +112,7 @@ def train_if_human_intervened(step):
         model.learn(total_timesteps=1000, reset_num_timesteps=False)
         human_intervened = False
 
-# 메인 루프
+# ------------------------ 메인 루프 ------------------------
 obs = env.reset()
 obs = obs.transpose(0, 3, 1, 2)
 step = 0
@@ -158,19 +159,18 @@ while step < total_timesteps:
         obs = env.reset()
         obs = obs.transpose(0, 3, 1, 2)
 
-# 사람 개입 기반으로 후속 학습 시작
+# ------------------------ 사람 개입 이후 반복 학습 ------------------------
 print("🚀 사람 개입 데이터를 기반으로 반복 학습 시작")
 
 model = SAC.load(os.path.join(MODEL_DIR, "after_human_model.zip"), env=env, tensorboard_log=LOG_DIR)
 
-# 사람이 개입한 10만 스텝 동안의 데이터를 여러 번 리플레이
 print("🔁 사람 개입 데이터 재학습 (pre-train 5만 스텝)")
 model.learn(total_timesteps=50000, reset_num_timesteps=False)
 
-# 그 다음 전체 학습 진행 (85만 스텝)
 print("🚀 본 학습 시작 (850,000 스텝)")
 model.learn(total_timesteps=850000, reset_num_timesteps=False)
 
+# ------------------------ 최종 모델 저장 ------------------------
 model.save(MODEL_PATH)
 print(f"✅ 학습 완료! 최종 모델 저장됨 → {MODEL_PATH}")
 
