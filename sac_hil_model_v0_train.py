@@ -107,9 +107,9 @@ def get_human_action(original_action, step):
 # ------------------------ 개입 여부에 따라 학습 수행 ------------------------
 def train_if_human_intervened(step):
     global human_intervened
-    if step < max_human_steps and step % 1000 == 0 and human_intervened:
-        print(f"📢 Step {step}: 사람 개입 → 1000 스텝 학습")
-        model.learn(total_timesteps=1000, reset_num_timesteps=False)
+    if step < max_human_steps and step % 5000 == 0 and human_intervened:
+        print(f"📢 Step {step}: 사람 개입 → 5000 스텝 학습")
+        model.learn(total_timesteps=5000, reset_num_timesteps=False)
         human_intervened = False
 
 # ------------------------ 메인 루프 ------------------------
