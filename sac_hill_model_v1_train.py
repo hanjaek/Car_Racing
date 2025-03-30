@@ -71,21 +71,18 @@ def get_human_action(original_action, step):
     action = np.array(original_action, dtype=np.float32).reshape(-1)
 
     steer_step = 0.1         # 좌우 조향 변화량
-    speed_step = 0.02        # 전진 가속 변화량 (조정된 값)
+    speed_step = 0.05        # 전진 가속 변화량
     brake_step = 0.1         # 브레이크 강도
     steering_recovery = 0.05 # 조향 복원 속도
 
-    # 위 방향키 눌렀을 때 속도 점진적으로 증가
     if keys[pygame.K_LEFT]:
         current_steering -= steer_step
         action[2] = min(0.3, action[2] + brake_step)
     if keys[pygame.K_RIGHT]:
         current_steering += steer_step
         action[2] = min(0.3, action[2] + brake_step)
-
     if keys[pygame.K_UP]:
-        # 위 방향키를 눌렀을 때 속도가 점진적으로 증가
-        current_speed = min(current_speed + speed_step, 1.0)  # 최대 속도 1.0으로 제한
+        current_speed += speed_step
         action[2] = 0.0
         if current_steering > 0:
             current_steering = max(0, current_steering - steering_recovery)
@@ -93,24 +90,18 @@ def get_human_action(original_action, step):
             current_steering = min(0, current_steering + steering_recovery)
     if keys[pygame.K_DOWN]:
         action[2] = 1.0
-        current_speed *= 0.8  # 속도 감소
+        current_speed *= 0.8
+    if not any([keys[pygame.K_DOWN], keys[pygame.K_LEFT], keys[pygame.K_RIGHT]]):
+        action[2] = max(0.0, action[2] - 0.05)
 
-    # 키를 떼면 점진적으로 속도 감소 (현재 속도 기준으로 최소 속도 설정)
-    if not any([keys[pygame.K_DOWN], keys[pygame.K_LEFT], keys[pygame.K_RIGHT], keys[pygame.K_UP]]):
-        # 위 방향키가 떼어졌을 때 속도를 점진적으로 감소
-        current_speed -= speed_step  # 점진적으로 감소
-        current_speed = max(current_speed, 0.5)
-
-    # 속도 및 조향 제한
     current_steering = np.clip(current_steering, -1.0, 1.0)
-    current_speed = np.clip(current_speed, 0.0, 1.0)  # 속도 제한
+    current_speed = np.clip(current_speed, 0.0, 1.0)
     action[2] = np.clip(action[2], 0.0, 1.0)
 
-    # 사람 개입 비율에 따라 속도와 조향 혼합
     alpha = max(min_alpha, initial_alpha - decay_rate * (step / max_human_steps)) if step < max_human_steps else 0.0
     action[0] = alpha * current_steering + (1 - alpha) * action[0]  # 조향 혼합
     action[1] = alpha * current_speed + (1 - alpha) * action[1]     # 속도 혼합
-    action[1] = np.clip(action[1], 0.0, 1.0)  # 속도 제한
+    action[1] = np.clip(action[1], 0.0, 1.0)
 
     return action
 
@@ -147,15 +138,6 @@ while step <= max_human_steps:
         terminated, truncated = done, False
     else:
         next_obs, reward, terminated, truncated, info = result
-
-   
-    # ------------------------ 브레이크 지속 시 패널티 ------------------------
-
-    if action[0][2] > 0.5 and current_speed < 0.2:
-        reward -= 0.1  # 속도 없는데 브레이크 밟으면 감점
-
-    elif action[0][2] > 0.6:
-        reward -= 0.01  # 브레이크는 살짝 감점만
 
 
     done = terminated or truncated

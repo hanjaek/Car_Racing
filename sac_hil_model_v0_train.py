@@ -139,15 +139,6 @@ while step <= max_human_steps:
     else:
         next_obs, reward, terminated, truncated, info = result
 
-   
-    # ------------------------ 브레이크 지속 시 패널티 ------------------------
-
-    if action[0][2] > 0.5 and current_speed < 0.2:
-        reward -= 0.1  # 속도 없는데 브레이크 밟으면 감점
-
-    elif action[0][2] > 0.6:
-        reward -= 0.01  # 브레이크는 살짝 감점만
-
 
     done = terminated or truncated
     next_obs = next_obs.transpose(0, 3, 1, 2)
