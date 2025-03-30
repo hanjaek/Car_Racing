@@ -154,9 +154,9 @@ while step <= max_human_steps:
 
     # 리플레이 버퍼에 transition 추가
     model.replay_buffer.add(obs, next_obs, action, [reward], [terminated], [{}])
-    if human_intervened:
-        print(f"리플레이 버퍼 추가됨 | Step {step} | Action: {action} | Speed: {current_speed:.3f} | Brake: {action[0][2]:.3f}")
-        print(f"현재 버퍼 크기: {model.replay_buffer.size()}")
+    # if human_intervened:
+    #     print(f"리플레이 버퍼 추가됨 | Step {step} | Action: {action} | Speed: {current_speed:.3f} | Brake: {action[0][2]:.3f}")
+    #     print(f"현재 버퍼 크기: {model.replay_buffer.size()}")
 
 
     train_if_human_intervened(step)
