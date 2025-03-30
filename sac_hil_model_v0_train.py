@@ -25,7 +25,7 @@ SEED = 1
 def make_env():
     def _init():
         env = gym.make("CarRacing-v3", domain_randomize=False, render_mode="human")
-        env = Monitor(env, filename=os.path.join(LOG_DIR, "SAC_HIL_seed1.csv"))
+        env = Monitor(env, filename=os.path.join(LOG_DIR, "SAC_HIL_seed1_v0.csv"))
         env.reset(seed=SEED)
         return env
     return _init
@@ -108,9 +108,9 @@ def get_human_action(original_action, step):
 # ------------------------ 개입 여부에 따라 학습 수행 ------------------------
 def train_if_human_intervened(step):
     global human_intervened
-    if step < max_human_steps and step % 500 == 0 and human_intervened:
-        print(f"📢 Step {step}: 사람 개입 → 500 스텝 학습")
-        model.learn(total_timesteps=500, reset_num_timesteps=False)
+    if step < max_human_steps and step % 1000 == 0 and human_intervened:
+        print(f"📢 Step {step}: 사람 개입 → 1000 스텝 학습")
+        model.learn(total_timesteps=1000, reset_num_timesteps=False)
         human_intervened = False
 
 # ------------------------ 메인 루프 ------------------------
@@ -154,9 +154,9 @@ while step <= max_human_steps:
 
     # 리플레이 버퍼에 transition 추가
     model.replay_buffer.add(obs, next_obs, action, [reward], [terminated], [{}])
-    # if human_intervened:
-    #     print(f"리플레이 버퍼 추가됨 | Step {step} | Action: {action} | Speed: {current_speed:.3f} | Brake: {action[0][2]:.3f}")
-    #     print(f"현재 버퍼 크기: {model.replay_buffer.size()}")
+    if human_intervened:
+        print(f"리플레이 버퍼 추가됨 | Step {step} | Action: {action} | Speed: {current_speed:.3f} | Brake: {action[0][2]:.3f}")
+        print(f"현재 버퍼 크기: {model.replay_buffer.size()}")
 
 
     train_if_human_intervened(step)
