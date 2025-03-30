@@ -56,7 +56,7 @@ except:
 
 # ------------------------ 제어 변수 초기화 ------------------------
 current_steering = 0.0
-current_speed = 0.0
+current_speed = 0.5
 
 # ------------------------ HIL 하이퍼파라미터 ------------------------
 initial_alpha = 0.9        # 사람 개입 비율 초기값
@@ -95,13 +95,13 @@ def get_human_action(original_action, step):
         action[2] = max(0.0, action[2] - 0.05)
 
     current_steering = np.clip(current_steering, -1.0, 1.0)
-    current_speed = np.clip(current_speed, 0.0, 0.1)
+    current_speed = np.clip(current_speed, 0.0, 1.0)
     action[2] = np.clip(action[2], 0.0, 1.0)
 
     alpha = max(min_alpha, initial_alpha - decay_rate * (step / max_human_steps)) if step < max_human_steps else 0.0
     action[0] = alpha * current_steering + (1 - alpha) * action[0]  # 조향 혼합
     action[1] = alpha * current_speed + (1 - alpha) * action[1]     # 속도 혼합
-    action[1] = np.clip(action[1], 0.0, 0.1)
+    action[1] = np.clip(action[1], 0.0, 1.0)
 
     return action
 

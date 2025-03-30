@@ -12,7 +12,7 @@ screen = pygame.display.set_mode((400, 300))
 pygame.display.set_caption("HIL Control Window")
 
 # ------------------------ 디렉토리 설정 ------------------------
-MODEL_DIR = "sac_hil_model_final"
+MODEL_DIR = "sac_hil_model_v1"
 LOG_DIR = "tensorboard_logs"
 MODEL_PATH = os.path.join(MODEL_DIR, "sac_car_racing_best")
 os.makedirs(MODEL_DIR, exist_ok=True)
@@ -25,7 +25,7 @@ SEED = 1
 def make_env():
     def _init():
         env = gym.make("CarRacing-v3", domain_randomize=False, render_mode="human")
-        env = Monitor(env, filename=os.path.join(LOG_DIR, "SAC_HIL.csv"))
+        env = Monitor(env, filename=os.path.join(LOG_DIR, "SAC_HIL_seed1_v1.csv"))
         env.reset(seed=SEED)
         return env
     return _init
@@ -54,33 +54,38 @@ except:
         tensorboard_log=LOG_DIR
     )
 
-# ------------------------ 변수 초기화 ------------------------
+# ------------------------ 제어 변수 초기화 ------------------------
 current_steering = 0.0
-current_speed = 0.0
-initial_alpha = 0.9
-min_alpha = 0.0
-decay_rate = 0.1
-max_human_steps = 50000
+current_speed = 0.5
 
-# ------------------------ 사람 개입 함수 ------------------------
+# ------------------------ HIL 하이퍼파라미터 ------------------------
+initial_alpha = 0.9        # 사람 개입 비율 초기값
+min_alpha = 0.0            # 최소 개입 비율
+decay_rate = 0.1           # 개입 비율 감소 속도
+max_human_steps = 50000    # 사람 개입 허용 최대 스텝 수
+
+# ------------------------ 인간 개입 함수 ------------------------
 def get_human_action(original_action, step):
     global current_steering, current_speed
     keys = pygame.key.get_pressed()
     action = np.array(original_action, dtype=np.float32).reshape(-1)
 
-    steer_step = 0.1
-    speed_step = 0.05
-    brake_step = 0.1
-    steering_recovery = 0.05
+    steer_step = 0.1         # 좌우 조향 변화량
+    speed_step = 0.02        # 전진 가속 변화량 (조정된 값)
+    brake_step = 0.1         # 브레이크 강도
+    steering_recovery = 0.05 # 조향 복원 속도
 
+    # 위 방향키 눌렀을 때 속도 점진적으로 증가
     if keys[pygame.K_LEFT]:
         current_steering -= steer_step
         action[2] = min(0.3, action[2] + brake_step)
     if keys[pygame.K_RIGHT]:
         current_steering += steer_step
         action[2] = min(0.3, action[2] + brake_step)
+
     if keys[pygame.K_UP]:
-        current_speed += speed_step
+        # 위 방향키를 눌렀을 때 속도가 점진적으로 증가
+        current_speed = min(current_speed + speed_step, 1.0)  # 최대 속도 1.0으로 제한
         action[2] = 0.0
         if current_steering > 0:
             current_steering = max(0, current_steering - steering_recovery)
@@ -88,36 +93,49 @@ def get_human_action(original_action, step):
             current_steering = min(0, current_steering + steering_recovery)
     if keys[pygame.K_DOWN]:
         action[2] = 1.0
-        current_speed *= 0.8
-    if not any([keys[pygame.K_DOWN], keys[pygame.K_LEFT], keys[pygame.K_RIGHT]]):
-        action[2] = max(0.0, action[2] - 0.05)
+        current_speed *= 0.8  # 속도 감소
 
+    # 키를 떼면 점진적으로 속도 감소 (현재 속도 기준으로 최소 속도 설정)
+    if not any([keys[pygame.K_DOWN], keys[pygame.K_LEFT], keys[pygame.K_RIGHT], keys[pygame.K_UP]]):
+        # 위 방향키가 떼어졌을 때 속도를 점진적으로 감소
+        current_speed -= speed_step  # 점진적으로 감소
+        current_speed = max(current_speed, 0.5)
+
+    # 속도 및 조향 제한
     current_steering = np.clip(current_steering, -1.0, 1.0)
-    current_speed = np.clip(current_speed, 0.0, 0.7)
+    current_speed = np.clip(current_speed, 0.0, 1.0)  # 속도 제한
     action[2] = np.clip(action[2], 0.0, 1.0)
 
+    # 사람 개입 비율에 따라 속도와 조향 혼합
     alpha = max(min_alpha, initial_alpha - decay_rate * (step / max_human_steps)) if step < max_human_steps else 0.0
-    action[0] = alpha * current_steering + (1 - alpha) * action[0]
-    action[1] = alpha * current_speed + (1 - alpha) * action[1]
-    action[1] = np.clip(action[1], 0.0, 0.7)
+    action[0] = alpha * current_steering + (1 - alpha) * action[0]  # 조향 혼합
+    action[1] = alpha * current_speed + (1 - alpha) * action[1]     # 속도 혼합
+    action[1] = np.clip(action[1], 0.0, 1.0)  # 속도 제한
 
     return action
+
+# ------------------------ 개입 여부에 따라 학습 수행 ------------------------
+def train_if_human_intervened(step):
+    global human_intervened
+    if step < max_human_steps and step % 1000 == 0 and human_intervened:
+        print(f"📢 Step {step}: 사람 개입 → 1000 스텝 학습")
+        model.learn(total_timesteps=1000, reset_num_timesteps=False)
+        human_intervened = False
 
 # ------------------------ 메인 루프 ------------------------
 obs = env.reset()
 obs = obs.transpose(0, 3, 1, 2)
 step = 0
+total_timesteps = 1_000_000
 human_intervened = False
-reward_buffer = []
-length_buffer = []
-current_ep_reward = 0
-current_ep_length = 0
+# 브레이크 감지 변수
+brake_duration = 0  
 
 while step <= max_human_steps:
     pygame.event.pump()
     action = model.predict(obs, deterministic=True)[0]
 
-    if any(pygame.key.get_pressed()):
+    if step < max_human_steps and any(pygame.key.get_pressed()):
         action = get_human_action(action, step)
         human_intervened = True
 
@@ -130,53 +148,61 @@ while step <= max_human_steps:
     else:
         next_obs, reward, terminated, truncated, info = result
 
+   
+    # ------------------------ 브레이크 지속 시 패널티 ------------------------
+
     if action[0][2] > 0.5 and current_speed < 0.2:
-        reward -= 0.1
+        reward -= 0.1  # 속도 없는데 브레이크 밟으면 감점
+
     elif action[0][2] > 0.6:
-        reward -= 0.01
+        reward -= 0.01  # 브레이크는 살짝 감점만
+
 
     done = terminated or truncated
     next_obs = next_obs.transpose(0, 3, 1, 2)
 
-    # ReplayBuffer에 transition 저장
+    # 리플레이 버퍼에 transition 추가
     model.replay_buffer.add(obs, next_obs, action, [reward], [terminated], [{}])
+    # if human_intervened:
+    #     print(f"리플레이 버퍼 추가됨 | Step {step} | Action: {action} | Speed: {current_speed:.3f} | Brake: {action[0][2]:.3f}")
+    #     print(f"현재 버퍼 크기: {model.replay_buffer.size()}")
 
-    # 콘솔 출력 (오류 방지용 .item() 사용)
-    print(
-        f"[STEP {step}] "
-        f"Reward: {float(reward):.2f} | "
-        f"Steering: {float(action[0][0]):.2f} | "
-        f"Speed: {float(action[0][1]):.2f} | "
-        f"Brake: {float(action[0][2]):.2f}"
-    )
+
+    train_if_human_intervened(step)
 
     obs = next_obs
     step += 1
-    current_ep_reward += reward
-    current_ep_length += 1
     env.render()
 
-    if step % 1000 == 0 and human_intervened:
-        print(f"📢 Step {step}: 사람 개입 → SAC 학습 (1000 스텝)")
-        model.learn(total_timesteps=1000, reset_num_timesteps=False)
-        human_intervened = False
+    print(f"Step {step} | Human: {human_intervened} | Action: {action}")
+
+    if step == max_human_steps:
+        print("💾 모델 저장 (사람 개입 종료 시점)")
+        model.save(os.path.join(MODEL_DIR, "after_human_model.zip"))
+
+        print("🎯 사람 개입 직후, 집중 학습 시작 (5만 스텝)")
+        model.learn(total_timesteps=50000, reset_num_timesteps=False)
+        model.save(os.path.join(MODEL_DIR, "after_human_learned_model.zip"))
+
 
     if done:
-        reward_buffer.append(current_ep_reward)
-        length_buffer.append(current_ep_length)
-        model.logger.record("rollout/ep_rew_mean", np.mean(reward_buffer[-10:]))
-        model.logger.record("rollout/ep_len_mean", np.mean(length_buffer[-10:]))
-        model.logger.dump(step=step)
-
-        current_ep_reward = 0
-        current_ep_length = 0
         current_steering, current_speed = 0.0, 0.0
         obs = env.reset()
         obs = obs.transpose(0, 3, 1, 2)
 
-# ------------------------ 모델 저장 ------------------------
-print("✅ 사람 개입 학습 종료, 모델 저장 중...")
+# ------------------------ 사람 개입 이후 반복 학습 ------------------------
+print("🚀 사람 개입 데이터를 기반으로 반복 학습 시작")
+
+model = SAC.load(os.path.join(MODEL_DIR, "after_human_learned_model.zip"), env=env, tensorboard_log=LOG_DIR)
+
+print("🔁 사람 개입 데이터 재학습 (pre-train 5만 스텝)")
+model.learn(total_timesteps=50000, reset_num_timesteps=False)
+
+print("🚀 본 학습 시작 (900,000 스텝)")
+model.learn(total_timesteps=900000, reset_num_timesteps=False)
+
+# ------------------------ 최종 모델 저장 ------------------------
 model.save(MODEL_PATH)
-print(f"💾 모델 저장 완료: {MODEL_PATH}")
+print(f"✅ 학습 완료! 최종 모델 저장됨 → {MODEL_PATH}")
 
 pygame.quit()
