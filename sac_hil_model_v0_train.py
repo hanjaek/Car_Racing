@@ -95,13 +95,13 @@ def get_human_action(original_action, step):
         action[2] = max(0.0, action[2] - 0.05)
 
     current_steering = np.clip(current_steering, -1.0, 1.0)
-    current_speed = np.clip(current_speed, 0.0, 0.7)
+    current_speed = np.clip(current_speed, 0.0, 0.1)
     action[2] = np.clip(action[2], 0.0, 1.0)
 
     alpha = max(min_alpha, initial_alpha - decay_rate * (step / max_human_steps)) if step < max_human_steps else 0.0
     action[0] = alpha * current_steering + (1 - alpha) * action[0]  # 조향 혼합
     action[1] = alpha * current_speed + (1 - alpha) * action[1]     # 속도 혼합
-    action[1] = np.clip(action[1], 0.0, 0.7)
+    action[1] = np.clip(action[1], 0.0, 0.1)
 
     return action
 
