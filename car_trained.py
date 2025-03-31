@@ -6,8 +6,8 @@ from stable_baselines3.common.vec_env import DummyVecEnv
 from stable_baselines3.common.monitor import Monitor
 
 # 모델 저장된 폴더 경로
-MODEL_DIR = "sac_hil_model_v1"
-MODEL_PATH = os.path.join(MODEL_DIR, "after_human_model")
+MODEL_DIR = "sac_hil_model_v1_1"
+MODEL_PATH = os.path.join(MODEL_DIR, "sac_car_racing_best")
 
 # ✅ SEED 설정 (항상 동일한 트랙 등장)
 SEED = 1  
