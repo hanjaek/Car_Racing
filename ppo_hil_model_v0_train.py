@@ -165,7 +165,7 @@ print("사람 개입 데이터를 기반으로 전체 학습 수행")
 model.save(os.path.join(MODEL_DIR, "after_human_model.zip"))
 model.learn(total_timesteps=50000, reset_num_timesteps=False)
 model.save(os.path.join(MODEL_DIR, "after_human_learned_model.zip"))
-model.learn(total_timesteps=950000, reset_num_timesteps=False)
+model.learn(total_timesteps=900000, reset_num_timesteps=False)
 model.save(MODEL_PATH)
 
 pygame.quit()
