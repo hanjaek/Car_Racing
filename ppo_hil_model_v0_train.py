@@ -6,6 +6,23 @@ from stable_baselines3 import PPO
 from stable_baselines3.common.vec_env import DummyVecEnv
 from stable_baselines3.common.monitor import Monitor
 
+# ------------------------ Seed 설정 ------------------------
+SEED = 1
+
+# 시드 고정
+import random
+import torch
+
+random.seed(SEED)
+np.random.seed(SEED)
+torch.manual_seed(SEED)
+if torch.cuda.is_available():
+    torch.cuda.manual_seed(SEED)
+    torch.cuda.manual_seed_all(SEED)
+torch.backends.cudnn.deterministic = True
+torch.backends.cudnn.benchmark = False
+
+
 # ------------------------ Pygame 초기화 ------------------------
 pygame.init()
 screen = pygame.display.set_mode((400, 300))
@@ -18,8 +35,6 @@ MODEL_PATH = os.path.join(MODEL_DIR, "ppo_car_racing_best")
 os.makedirs(MODEL_DIR, exist_ok=True)
 os.makedirs(LOG_DIR, exist_ok=True)
 
-# ------------------------ Seed 설정 ------------------------
-SEED = 1
 
 # ------------------------ 환경 생성 함수 ------------------------
 def make_env():
@@ -187,14 +202,15 @@ pygame.quit()
 """
 - 1차 테스트
 
-초반 평균 리워드 -26 -> -16
-후반 평균 리워드 400 -> 600
-향상 성공
-
 """
 
 """
 - 2차 테스트
+
+"""
+
+"""
+- 3차 테스트
 
 """
 
