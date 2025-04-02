@@ -2,6 +2,8 @@ import os
 import gymnasium as gym
 import numpy as np
 import pygame
+import random
+import torch
 from stable_baselines3 import PPO
 from stable_baselines3.common.vec_env import DummyVecEnv
 from stable_baselines3.common.monitor import Monitor
@@ -10,9 +12,6 @@ from stable_baselines3.common.monitor import Monitor
 SEED = 1
 
 # 시드 고정
-import random
-import torch
-
 random.seed(SEED)
 np.random.seed(SEED)
 torch.manual_seed(SEED)
@@ -21,7 +20,6 @@ if torch.cuda.is_available():
     torch.cuda.manual_seed_all(SEED)
 torch.backends.cudnn.deterministic = True
 torch.backends.cudnn.benchmark = False
-
 
 # ------------------------ Pygame 초기화 ------------------------
 pygame.init()
@@ -34,7 +32,6 @@ LOG_DIR = "tensorboard_logs"
 MODEL_PATH = os.path.join(MODEL_DIR, "ppo_car_racing_best")
 os.makedirs(MODEL_DIR, exist_ok=True)
 os.makedirs(LOG_DIR, exist_ok=True)
-
 
 # ------------------------ 환경 생성 함수 ------------------------
 def make_env():
@@ -52,34 +49,34 @@ env.seed(SEED)
 # ------------------------ 모델 로드 또는 새로 생성 ------------------------
 try:
     model = PPO.load(MODEL_PATH, env=env, tensorboard_log=LOG_DIR)
-    print(f"✅ 기존 모델 로드 완료: {MODEL_PATH}")
+    print(f"기존 모델 로드 완료: {MODEL_PATH}")
 except:
-    print("🚀 새 모델 생성 시작")
+    print("새 모델 생성 시작")
     model = PPO(
-    "CnnPolicy",
-    env,
-    learning_rate=3e-4,
-    n_steps=2048,
-    batch_size=64,
-    n_epochs=10,
-    gamma=0.99,
-    gae_lambda=0.95,
-    clip_range=0.2,
-    ent_coef=0.01,
-    verbose=1,
-    tensorboard_log=LOG_DIR,
-    seed=SEED
-)
+        "CnnPolicy",
+        env,
+        learning_rate=3e-4,
+        n_steps=2048,
+        batch_size=64,
+        n_epochs=10,
+        gamma=0.99,
+        gae_lambda=0.95,
+        clip_range=0.2,
+        ent_coef=0.01,
+        verbose=1,
+        tensorboard_log=LOG_DIR,
+        seed=SEED
+    )
 
 # ------------------------ 제어 변수 초기화 ------------------------
 current_steering = 0.0
 current_speed = 0.5
 
 # ------------------------ HIL 하이퍼파라미터 ------------------------
-initial_alpha = 0.9        # 사람 개입 비율 초기값
-min_alpha = 0.0            # 최소 개입 비율
-decay_rate = 0.1           # 개입 비율 감소 속도
-max_human_steps = 50000    # 사람 개입 허용 최대 스텝 수
+initial_alpha = 0.9
+min_alpha = 0.0
+decay_rate = 0.1
+max_human_steps = 10000  # 초기 개입만 수행
 
 # ------------------------ 인간 개입 함수 ------------------------
 def get_human_action(original_action, step):
@@ -87,10 +84,10 @@ def get_human_action(original_action, step):
     keys = pygame.key.get_pressed()
     action = np.array(original_action, dtype=np.float32).reshape(-1)
 
-    steer_step = 0.1         # 좌우 조향 변화량
-    speed_step = 0.05        # 전진 가속 변화량
-    brake_step = 0.1         # 브레이크 강도
-    steering_recovery = 0.05 # 조향 복원 속도
+    steer_step = 0.1
+    speed_step = 0.05
+    brake_step = 0.1
+    steering_recovery = 0.05
 
     if keys[pygame.K_LEFT]:
         current_steering -= steer_step
@@ -116,28 +113,17 @@ def get_human_action(original_action, step):
     action[2] = np.clip(action[2], 0.0, 1.0)
 
     alpha = max(min_alpha, initial_alpha - decay_rate * (step / max_human_steps)) if step < max_human_steps else 0.0
-    action[0] = alpha * current_steering + (1 - alpha) * action[0]  # 조향 혼합
-    action[1] = alpha * current_speed + (1 - alpha) * action[1]     # 속도 혼합
+    action[0] = alpha * current_steering + (1 - alpha) * action[0]
+    action[1] = alpha * current_speed + (1 - alpha) * action[1]
     action[1] = np.clip(action[1], 0.0, 1.0)
 
     return action
-
-# ------------------------ 개입 여부에 따라 학습 수행 ------------------------
-def train_if_human_intervened(step):
-    global human_intervened
-    if step < max_human_steps and step % 1000 == 0 and human_intervened:
-        print(f"📢 Step {step}: 사람 개입 → 1000 스텝 학습")
-        model.learn(total_timesteps=1000, reset_num_timesteps=False)
-        human_intervened = False
 
 # ------------------------ 메인 루프 ------------------------
 obs = env.reset()
 obs = obs.transpose(0, 3, 1, 2)
 step = 0
-total_timesteps = 1_000_000
 human_intervened = False
-# 브레이크 감지 변수
-brake_duration = 0  
 
 while step <= max_human_steps:
     pygame.event.pump()
@@ -156,11 +142,12 @@ while step <= max_human_steps:
     else:
         next_obs, reward, terminated, truncated, info = result
 
-
     done = terminated or truncated
     next_obs = next_obs.transpose(0, 3, 1, 2)
 
-    train_if_human_intervened(step)
+    if step % 2048 == 0 and human_intervened:
+        model.learn(total_timesteps=2048, reset_num_timesteps=False)
+        human_intervened = False
 
     obs = next_obs
     step += 1
@@ -168,49 +155,17 @@ while step <= max_human_steps:
 
     print(f"Step {step} | Human: {human_intervened} | Action: {action}")
 
-    if step == max_human_steps:
-        print("💾 모델 저장 (사람 개입 종료 시점)")
-        model.save(os.path.join(MODEL_DIR, "after_human_model.zip"))
-
-        print("🎯 사람 개입 직후, 집중 학습 시작 (5만 스텝)")
-        model.learn(total_timesteps=50000, reset_num_timesteps=False)
-        model.save(os.path.join(MODEL_DIR, "after_human_learned_model.zip"))
-
-
     if done:
         current_steering, current_speed = 0.0, 0.0
         obs = env.reset()
         obs = obs.transpose(0, 3, 1, 2)
 
-# ------------------------ 사람 개입 이후 반복 학습 ------------------------
-print("🚀 사람 개입 데이터를 기반으로 반복 학습 시작")
-
-model = PPO.load(os.path.join(MODEL_DIR, "after_human_learned_model.zip"), env=env, tensorboard_log=LOG_DIR)
-
-print("🔁 사람 개입 데이터 재학습 (pre-train 5만 스텝)")
+# ------------------------ 사람 개입 이후 전체 학습 ------------------------
+print("사람 개입 데이터를 기반으로 전체 학습 수행")
+model.save(os.path.join(MODEL_DIR, "after_human_model.zip"))
 model.learn(total_timesteps=50000, reset_num_timesteps=False)
-
-print("🚀 본 학습 시작 (900,000 스텝)")
-model.learn(total_timesteps=900000, reset_num_timesteps=False)
-
-# ------------------------ 최종 모델 저장 ------------------------
+model.save(os.path.join(MODEL_DIR, "after_human_learned_model.zip"))
+model.learn(total_timesteps=950000, reset_num_timesteps=False)
 model.save(MODEL_PATH)
-print(f"✅ 학습 완료! 최종 모델 저장됨 → {MODEL_PATH}")
 
 pygame.quit()
-
-"""
-- 1차 테스트
-
-"""
-
-"""
-- 2차 테스트
-
-"""
-
-"""
-- 3차 테스트
-
-"""
-
