@@ -5,7 +5,7 @@ from stable_baselines3.common.vec_env import DummyVecEnv
 from stable_baselines3.common.monitor import Monitor
 
 # ✅ 모델 및 로그 저장할 폴더 설정
-MODEL_DIR = "basic_model_v1_2"
+MODEL_DIR = "basic_model_v1_3"
 LOG_DIR = "tensorboard_logs"  
 MODEL_PATH = os.path.join(MODEL_DIR, "sac_car_racing_best")
 
@@ -20,7 +20,7 @@ SEED = 1  # 트랙을 고정하기 위한 SEED 값
 def make_env():
     def _init():
         env = gym.make("CarRacing-v3", domain_randomize=False, render_mode="rgb_array")
-        env = Monitor(env, filename=os.path.join(LOG_DIR, "basic_seed1_v1_2.csv"))  
+        env = Monitor(env, filename=os.path.join(LOG_DIR, "basic_seed1_v1_3.csv"))  
         env.reset(seed=SEED)  # ✅ 트랙 고정
         return env
     return _init
