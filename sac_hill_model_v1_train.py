@@ -12,7 +12,7 @@ screen = pygame.display.set_mode((400, 300))
 pygame.display.set_caption("HIL Control Window")
 
 # ------------------------ 디렉토리 설정 ------------------------
-MODEL_DIR = "sac_hil_model_v1_2"
+MODEL_DIR = "sac_hil_model_v1_4"
 LOG_DIR = "tensorboard_logs"
 MODEL_PATH = os.path.join(MODEL_DIR, "sac_car_racing_best")
 os.makedirs(MODEL_DIR, exist_ok=True)
@@ -25,7 +25,7 @@ SEED = 1
 def make_env():
     def _init():
         env = gym.make("CarRacing-v3", domain_randomize=False, render_mode="human")
-        env = Monitor(env, filename=os.path.join(LOG_DIR, "SAC_HIL_seed1_v1_2.csv"))
+        env = Monitor(env, filename=os.path.join(LOG_DIR, "SAC_HIL_seed1_v1_4.csv"))
         env.reset(seed=SEED)
         return env
     return _init
