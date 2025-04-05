@@ -12,9 +12,9 @@ screen = pygame.display.set_mode((400, 300))
 pygame.display.set_caption("HIL Control Window")
 
 # ------------------------ 디렉토리 설정 ------------------------
-MODEL_DIR = "sac_hil_model_v1_4"
-LOG_DIR = "tensorboard_logs"
-MODEL_PATH = os.path.join(MODEL_DIR, "sac_car_racing_best")
+MODEL_DIR = "../sac_hil_model"
+LOG_DIR = "../tensorboard_logs"
+MODEL_PATH = os.path.join(MODEL_DIR, "sac_hil_model")
 os.makedirs(MODEL_DIR, exist_ok=True)
 os.makedirs(LOG_DIR, exist_ok=True)
 
@@ -25,7 +25,7 @@ SEED = 1
 def make_env():
     def _init():
         env = gym.make("CarRacing-v3", domain_randomize=False, render_mode="human")
-        env = Monitor(env, filename=os.path.join(LOG_DIR, "SAC_HIL_seed1_v1_4.csv"))
+        env = Monitor(env, filename=os.path.join(LOG_DIR, "sac_hil_model.csv"))
         env.reset(seed=SEED)
         return env
     return _init
@@ -37,9 +37,9 @@ env.seed(SEED)
 # ------------------------ 모델 로드 또는 새로 생성 ------------------------
 try:
     model = SAC.load(MODEL_PATH, env=env, tensorboard_log=LOG_DIR)
-    print(f"✅ 기존 모델 로드 완료: {MODEL_PATH}")
+    print(f"- 기존 모델 로드 완료: {MODEL_PATH}")
 except:
-    print("🚀 새 모델 생성 시작")
+    print("- 새 모델 생성 시작")
     model = SAC(
         "CnnPolicy",
         env,
@@ -109,7 +109,7 @@ def get_human_action(original_action, step):
 def train_if_human_intervened(step):
     global human_intervened
     if step < max_human_steps and step % 1000 == 0 and human_intervened:
-        print(f"📢 Step {step}: 사람 개입 → 1000 스텝 학습")
+        print(f"- Step {step}: 사람 개입 → 1000 스텝 학습")
         model.learn(total_timesteps=1000, reset_num_timesteps=False)
         human_intervened = False
 
@@ -159,10 +159,10 @@ while step <= max_human_steps:
     print(f"Step {step} | Human: {human_intervened} | Action: {action}")
 
     if step == max_human_steps:
-        print("💾 모델 저장 (사람 개입 종료 시점)")
+        print("- 모델 저장 (사람 개입 종료 시점)")
         model.save(os.path.join(MODEL_DIR, "after_human_model.zip"))
 
-        print("🎯 사람 개입 직후, 집중 학습 시작 (5만 스텝)")
+        print("- 사람 개입 직후, 집중 학습 시작 (5만 스텝)")
         model.learn(total_timesteps=50000, reset_num_timesteps=False)
         model.save(os.path.join(MODEL_DIR, "after_human_learned_model.zip"))
 
@@ -173,19 +173,19 @@ while step <= max_human_steps:
         obs = obs.transpose(0, 3, 1, 2)
 
 # ------------------------ 사람 개입 이후 반복 학습 ------------------------
-print("🚀 사람 개입 데이터를 기반으로 반복 학습 시작")
+print("- 사람 개입 데이터를 기반으로 반복 학습 시작")
 
 model = SAC.load(os.path.join(MODEL_DIR, "after_human_learned_model.zip"), env=env, tensorboard_log=LOG_DIR)
 
-print("🔁 사람 개입 데이터 재학습 (pre-train 5만 스텝)")
+print("- 사람 개입 데이터 재학습 (pre-train 5만 스텝)")
 model.learn(total_timesteps=50000, reset_num_timesteps=False)
 
-print("🚀 본 학습 시작 (900,000 스텝)")
+print("- 본 학습 시작 (900,000 스텝)")
 model.learn(total_timesteps=900000, reset_num_timesteps=False)
 
 # ------------------------ 최종 모델 저장 ------------------------
 model.save(MODEL_PATH)
-print(f"✅ 학습 완료! 최종 모델 저장됨 → {MODEL_PATH}")
+print(f"- 학습 완료! 최종 모델 저장됨 → {MODEL_PATH}")
 
 pygame.quit()
 
@@ -200,6 +200,15 @@ pygame.quit()
 
 """
 - 2차 테스트
+
+상승하다 다시 하락
+
+"""
+
+"""
+- 3차 테스트
+
+향상 실패
 
 """
 
