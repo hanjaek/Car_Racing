@@ -5,6 +5,8 @@ import matplotlib.pyplot as plt
 from scipy.signal import savgol_filter
 from tensorboard.backend.event_processing.event_accumulator import EventAccumulator
 
+plt.rcParams.update({'font.size': 20})
+
 def load_and_merge_all_logs(log_dir, tag='rollout/ep_rew_mean', max_step=1_000_000):
     event_files = sorted(glob.glob(os.path.join(log_dir, "events.out.tfevents.*")))
     all_events = []
@@ -52,5 +54,5 @@ plt.xlim(0, 1_000_000)
 plt.legend()
 plt.grid(True)
 plt.tight_layout()
-plt.savefig("sac_hil_only_plot.png", dpi=300, bbox_inches='tight')
+plt.savefig("sac_hil_plot.png", dpi=300, bbox_inches='tight')
 plt.show()

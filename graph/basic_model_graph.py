@@ -5,6 +5,8 @@ import matplotlib.pyplot as plt
 from scipy.signal import savgol_filter
 from tensorboard.backend.event_processing.event_accumulator import EventAccumulator
 
+plt.rcParams.update({'font.size': 20})
+
 def load_tb_log(file_path, tag='rollout/ep_rew_mean', max_step=1_000_000):
     ea = EventAccumulator(file_path)
     ea.Reload()
