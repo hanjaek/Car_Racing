@@ -23,3 +23,5 @@ tensorboard_logs/
 ceed_model_v0/
 ceed_model_v1/
 testcode/
+
+*png
