@@ -1,5 +1,3 @@
-# 모든 ZIP 관련 파일 무시
-*.zip
 
 # 가상환경 폴더 무시
 car_racing_env/
@@ -17,11 +15,15 @@ logs/
 model/
 basic_model_v0/
 basic_model_v1/
+basic_model_v1_2/
+basic_model_v1_3/
 sac_hil_model_v0/
+sac_hil_model_v1/after_human_learned_model.zip
+sac_hil_model_v1/sac_hil_model.zip
+sac_hil_model_v1_2/
+sac_hil_model_v1_3/
 tensorboard_logs/
 *.csv
 ceed_model_v0/
 ceed_model_v1/
 testcode/
-
-*png
