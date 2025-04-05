@@ -21,10 +21,10 @@ This project explores the integration of **Human-in-the-Loop (HIL)** techniques 
 - Pygame (for keyboard-based human intervention)
 
 ## 🧪 Experimental Result (Preview)
-![SAC Model Comparison](./graph/sac_comparison.png)  
+![SAC Model Comparison](./graph/sac_reward_plot.png)  
 *Figure 1. SAC model reward comparison*
 
-![SAC+HIL Model Comparison](./graph/sac_hil_comparison.png)  
+![SAC+HIL Model Comparison](./graph/sac_hil_reward_plot.png)  
 *Figure 2. SAC+HIL model reward comparison*
 
 
